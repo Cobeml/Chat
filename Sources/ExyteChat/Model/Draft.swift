@@ -12,18 +12,21 @@ public struct DraftMessage {
     public let recording: Recording?
     public let replyMessage: ReplyMessage?
     public let createdAt: Date
+    public let type: String?
 
     public init(id: String? = nil, 
                 text: String,
                 medias: [Media],
                 recording: Recording?,
                 replyMessage: ReplyMessage?,
-                createdAt: Date) {
+                createdAt: Date,
+                type: String? = nil) {
         self.id = id
         self.text = text
         self.medias = medias
         self.recording = recording
         self.replyMessage = replyMessage
         self.createdAt = createdAt
+        self.type = type
     }
 }

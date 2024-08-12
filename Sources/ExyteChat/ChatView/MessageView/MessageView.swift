@@ -85,39 +85,65 @@ struct MessageView: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            if !message.user.isCurrentUser {
-                avatarView
+        if message.type == "system"{
+            HStack(alignment: .bottom, spacing: 0) {
+                requestAcceptedView(message)
+                
             }
-
-            VStack(alignment: message.user.isCurrentUser ? .trailing : .leading, spacing: 2) {
-                if !isDisplayingMessageMenu, let reply = message.replyMessage?.toMessage() {
-                    replyBubbleView(reply)
-                        .opacity(0.5)
-                        .padding(message.user.isCurrentUser ? .trailing : .leading, 10)
-                        .overlay(alignment: message.user.isCurrentUser ? .trailing : .leading) {
-                            Capsule()
-                                .foregroundColor(theme.colors.buttonBackground)
-                                .frame(width: 2)
-                        }
-                }
-                bubbleView(message)
-            }
-
-            if message.user.isCurrentUser, let status = message.status {
-                MessageStatusView(status: status) {
-                    if case let .error(draft) = status {
-                        viewModel.sendMessage(draft)
-                    }
-                }
-                .sizeGetter($statusSize)
-            }
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
+            .frame(maxWidth: UIScreen.main.bounds.width, alignment: .center)
         }
-        .padding(.top, topPadding)
-        .padding(.bottom, bottomPadding)
-        .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
-        .padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
-        .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+        if message.type == "invite"{
+            
+            HStack(alignment: .bottom, spacing: 0) {
+                
+                
+                inviteView(message)
+            }
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
+            .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
+            .padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+            .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+        }
+        else{
+            HStack(alignment: .bottom, spacing: 0) {
+                
+                
+                if !message.user.isCurrentUser {
+                    avatarView
+                }
+                
+                VStack(alignment: message.user.isCurrentUser ? .trailing : .leading, spacing: 2) {
+                    if !isDisplayingMessageMenu, let reply = message.replyMessage?.toMessage() {
+                        replyBubbleView(reply)
+                            .opacity(0.5)
+                            .padding(message.user.isCurrentUser ? .trailing : .leading, 10)
+                            .overlay(alignment: message.user.isCurrentUser ? .trailing : .leading) {
+                                Capsule()
+                                    .foregroundColor(theme.colors.buttonBackground)
+                                    .frame(width: 2)
+                            }
+                    }
+                    bubbleView(message)
+                }
+                
+                if message.user.isCurrentUser, let status = message.status {
+                    MessageStatusView(status: status) {
+                        if case let .error(draft) = status {
+                            viewModel.sendMessage(draft)
+                        }
+                    }
+                    .sizeGetter($statusSize)
+                }
+            }
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
+            .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
+            .padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+            .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+        }
     }
 
     @ViewBuilder
@@ -165,6 +191,80 @@ struct MessageView: View {
             if let recording = message.recording {
                 recordingView(recording)
             }
+        }
+        .font(.caption2)
+        .padding(.vertical, 8)
+        .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
+        .bubbleBackground(message, theme: theme, isReply: true)
+    }
+    
+    @ViewBuilder
+    func requestAcceptedView(_ message: Message) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(message.text)
+                .fontWeight(.semibold)
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+
+        }
+        .font(.caption2)
+        .padding(.vertical, 8)
+        .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
+    }
+    
+    
+    @ViewBuilder
+    func inviteView(_ message: Message) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\(message.user.name), would like to invite you")
+                .fontWeight(.semibold)
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+
+            if !message.attachments.isEmpty {
+                attachmentsView(message)
+                    .padding(.top, 4)
+                    .padding(.bottom, message.text.isEmpty ? 0 : 4)
+            }
+
+            if !message.text.isEmpty {
+                MessageTextView(text: message.text, messageUseMarkdown: messageUseMarkdown)
+                    .padding(.horizontal, MessageView.horizontalTextPadding)
+            }
+            VStack{
+                Button(action: {
+                    print("Accept")
+                    
+                    
+                }) {
+                   
+                        Text("Approve")
+                        .padding()
+                        .frame(width: .infinity) // Ensures the button has a minimum width
+                                      .background(Color.blue) // Background color
+                                      .foregroundColor(.white) // Text color
+                                      .clipShape(Capsule()) // Oval s
+                    
+                }
+                .frame(height: 25)
+          
+                
+                Button(action: {
+                                      
+                                   }) {
+                                       ZStack {
+                                        
+                                           Text("Reject")
+                                               .font(.system(size: 11))
+                                               .foregroundColor(.white)
+                                               .bold()
+                                       }
+                                   }
+                                   .frame(height: 25)
+                                   .clipShape(Capsule())
+                                   .padding(.vertical, 5)
+                                   .padding(.horizontal, 0)
+                                   
+            }
+            .padding(5)
         }
         .font(.caption2)
         .padding(.vertical, 8)
