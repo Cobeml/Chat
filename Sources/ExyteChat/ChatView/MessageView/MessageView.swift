@@ -18,6 +18,7 @@ struct MessageView: View {
     let chatType: ChatType
     let avatarSize: CGFloat
     let tapAvatarClosure: ChatView.TapAvatarClosure?
+    let tapActionClosure: ChatView.TapActionClosure?
     let messageUseMarkdown: Bool
     let isDisplayingMessageMenu: Bool
     let showMessageTimeView: Bool
@@ -94,7 +95,7 @@ struct MessageView: View {
             .padding(.bottom, bottomPadding)
             .frame(maxWidth: UIScreen.main.bounds.width, alignment: .center)
         }
-        if message.type == "invite"{
+        else if message.type?.lowercased() == "invite"{
             
             HStack(alignment: .bottom, spacing: 0) {
                 
@@ -104,7 +105,8 @@ struct MessageView: View {
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)
             .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
-            .padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+            //.padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+            .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
             .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
         }
         else{
@@ -229,48 +231,57 @@ struct MessageView: View {
                 MessageTextView(text: message.text, messageUseMarkdown: messageUseMarkdown)
                     .padding(.horizontal, MessageView.horizontalTextPadding)
             }
-            VStack{
-                Button(action: {
-                    print("Accept")
+            
+            if message.requestStatus == "pending",  !message.user.isCurrentUser{
+                VStack(spacing: 10) {
+                    Button(action: {
+                        // Accept button action
+                        tapActionClosure?(message, "approved")
+                    }) {
+                        ZStack {
+                            Color.white.opacity(0.5)
+                            Text("Accept")
+                                .font(.system(size: 11))
+                                .foregroundColor(.black)
+                                .bold()
+                        }
+                        
+                    }
+                    .frame(height: 25)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 0)
+                    .buttonStyle(BorderlessButtonStyle())
                     
-                    
-                }) {
-                   
-                        Text("Approve")
-                        .padding()
-                        .frame(width: .infinity) // Ensures the button has a minimum width
-                                      .background(Color.blue) // Background color
-                                      .foregroundColor(.white) // Text color
-                                      .clipShape(Capsule()) // Oval s
+                    Button(action: {
+                        // Reject button action
+                        tapActionClosure?(message, "rejected")
+                    }) {
+                        ZStack {
+                            Color.white.opacity(0.5)
+                            Text("Reject")
+                                .font(.system(size: 11))
+                                .foregroundColor(.black)
+                                .bold()
+                        }
+                        
+                    }
+                    .frame(height: 25)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 0)
+                    .buttonStyle(BorderlessButtonStyle())
                     
                 }
-                .frame(height: 25)
-          
-                
-                Button(action: {
-                                      
-                                   }) {
-                                       ZStack {
-                                        
-                                           Text("Reject")
-                                               .font(.system(size: 11))
-                                               .foregroundColor(.white)
-                                               .bold()
-                                       }
-                                   }
-                                   .frame(height: 25)
-                                   .clipShape(Capsule())
-                                   .padding(.vertical, 5)
-                                   .padding(.horizontal, 0)
-                                   
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+                .padding(.top, 8)
+                .frame(maxWidth: MessageView.widthWithMedia)
             }
-            .padding(5)
         }
         .font(.caption2)
         .padding(.vertical, 8)
         .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
         .bubbleBackground(message, theme: theme, isReply: true)
     }
+
 
     @ViewBuilder
     var avatarView: some View {
@@ -435,6 +446,7 @@ struct MessageView_Preview: PreviewProvider {
                 chatType: .conversation,
                 avatarSize: 32,
                 tapAvatarClosure: nil,
+                tapActionClosure: nil,
                 messageUseMarkdown: false,
                 isDisplayingMessageMenu: false,
                 showMessageTimeView: true,

@@ -13,6 +13,8 @@ public struct DraftMessage {
     public let replyMessage: ReplyMessage?
     public let createdAt: Date
     public let type: String?
+    public let requestStatus: String?
+    public let attachMent: Attachment?
 
     public init(id: String? = nil, 
                 text: String,
@@ -20,7 +22,9 @@ public struct DraftMessage {
                 recording: Recording?,
                 replyMessage: ReplyMessage?,
                 createdAt: Date,
-                type: String? = nil) {
+                type: String? = nil,
+                requestStatus:String? = nil,
+                attachMent: Attachment? = nil) {
         self.id = id
         self.text = text
         self.medias = medias
@@ -28,5 +32,7 @@ public struct DraftMessage {
         self.replyMessage = replyMessage
         self.createdAt = createdAt
         self.type = type
+        self.requestStatus = requestStatus
+        self.attachMent = attachMent
     }
 }

@@ -68,6 +68,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
 
     /// User and MessageId
     public typealias TapAvatarClosure = (User, String) -> ()
+    public typealias TapActionClosure = (Message, String) -> ()
 
     @Environment(\.safeAreaInsets) private var safeAreaInsets
     @Environment(\.chatTheme) private var theme
@@ -110,6 +111,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     var showMessageMenuOnLongPress: Bool = true
     var showNetworkConnectionProblem: Bool = false
     var tapAvatarClosure: TapAvatarClosure?
+    var tapActionClosure: TapActionClosure?
     var mediaPickerSelectionParameters: MediaPickerParameters?
     var orientationHandler: MediaPickerOrientationHandler = {_ in}
     var chatTitle: String?
@@ -273,6 +275,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                avatarSize: avatarSize,
                showMessageMenuOnLongPress: showMessageMenuOnLongPress,
                tapAvatarClosure: tapAvatarClosure,
+               tapActionClosure: tapActionClosure,
                paginationHandler: paginationHandler,
                messageUseMarkdown: messageUseMarkdown,
                showMessageTimeView: showMessageTimeView,
@@ -373,7 +376,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
             leadingPadding: avatarSize + MessageView.horizontalAvatarPadding * 2,
             trailingPadding: MessageView.statusViewSize + MessageView.horizontalStatusPadding,
             onAction: menuActionClosure(row.message)) {
-                ChatMessageView(viewModel: viewModel, messageBuilder: messageBuilder, row: row, chatType: type, avatarSize: avatarSize, tapAvatarClosure: nil, messageUseMarkdown: messageUseMarkdown, isDisplayingMessageMenu: true, showMessageTimeView: showMessageTimeView, messageFont: messageFont)
+                ChatMessageView(viewModel: viewModel, messageBuilder: messageBuilder, row: row, chatType: type, avatarSize: avatarSize, tapAvatarClosure: nil, tapActionClosure: nil, messageUseMarkdown: messageUseMarkdown, isDisplayingMessageMenu: true, showMessageTimeView: showMessageTimeView, messageFont: messageFont)
                     .onTapGesture {
                         hideMessageMenu()
                     }
@@ -547,6 +550,12 @@ public extension ChatView {
     func tapAvatarClosure(_ closure: @escaping TapAvatarClosure) -> ChatView {
         var view = self
         view.tapAvatarClosure = closure
+        return view
+    }
+    
+    func tapActionClosure(_ closure: @escaping TapActionClosure) -> ChatView {
+        var view = self
+        view.tapActionClosure = closure
         return view
     }
 

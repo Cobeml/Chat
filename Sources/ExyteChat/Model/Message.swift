@@ -54,8 +54,8 @@ public struct Message: Identifiable, Hashable {
     public var recording: Recording?
     public var replyMessage: ReplyMessage?
     public var type: String?
-
     public var triggerRedraw: UUID?
+    public var requestStatus: String?
 
     public init(id: String,
                 user: User,
@@ -65,7 +65,8 @@ public struct Message: Identifiable, Hashable {
                 attachments: [Attachment] = [],
                 recording: Recording? = nil,
                 replyMessage: ReplyMessage? = nil,
-                type: String? = nil) {
+                type: String? = nil,
+                requestStatus: String? = nil) {
 
         self.id = id
         self.user = user
@@ -76,6 +77,7 @@ public struct Message: Identifiable, Hashable {
         self.recording = recording
         self.replyMessage = replyMessage
         self.type = type
+        self.requestStatus = requestStatus
     }
 
     public static func makeMessage(
@@ -99,7 +101,7 @@ public struct Message: Identifiable, Hashable {
                 }
             }
 
-            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: draft.type)
+            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: draft.type, requestStatus: draft.requestStatus)
         }
 }
 
