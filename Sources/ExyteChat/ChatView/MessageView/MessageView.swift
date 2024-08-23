@@ -109,6 +109,20 @@ struct MessageView: View {
             .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
             .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
         }
+        else if message.type?.lowercased() == "join"{
+            
+            HStack(alignment: .bottom, spacing: 0) {
+                
+                
+                joinView(message)
+            }
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
+            .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
+            //.padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+            .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
+            .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+        }
         else{
             HStack(alignment: .bottom, spacing: 0) {
                 
@@ -218,6 +232,74 @@ struct MessageView: View {
     func inviteView(_ message: Message) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("\(message.user.name), would like to invite you")
+                .fontWeight(.semibold)
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+
+            if !message.attachments.isEmpty {
+                attachmentsView(message)
+                    .padding(.top, 4)
+                    .padding(.bottom, message.text.isEmpty ? 0 : 4)
+            }
+
+            if !message.text.isEmpty {
+                MessageTextView(text: message.text, messageUseMarkdown: messageUseMarkdown)
+                    .padding(.horizontal, MessageView.horizontalTextPadding)
+            }
+            
+            if message.requestStatus == "pending",  !message.user.isCurrentUser{
+                VStack(spacing: 10) {
+                    Button(action: {
+                        // Accept button action
+                        tapActionClosure?(message, "approved")
+                    }) {
+                        ZStack {
+                            Color.white.opacity(0.5)
+                            Text("Accept")
+                                .font(.system(size: 11))
+                                .foregroundColor(.black)
+                                .bold()
+                        }
+                        
+                    }
+                    .frame(height: 25)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 0)
+                    .buttonStyle(BorderlessButtonStyle())
+                    
+                    Button(action: {
+                        // Reject button action
+                        tapActionClosure?(message, "rejected")
+                    }) {
+                        ZStack {
+                            Color.white.opacity(0.5)
+                            Text("Reject")
+                                .font(.system(size: 11))
+                                .foregroundColor(.black)
+                                .bold()
+                        }
+                        
+                    }
+                    .frame(height: 25)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 0)
+                    .buttonStyle(BorderlessButtonStyle())
+                    
+                }
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+                .padding(.top, 8)
+                .frame(maxWidth: MessageView.widthWithMedia)
+            }
+        }
+        .font(.caption2)
+        .padding(.vertical, 8)
+        .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
+        .bubbleBackground(message, theme: theme, isReply: true)
+    }
+    
+    @ViewBuilder
+    func joinView(_ message: Message) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\(message.user.name), would like to join you")
                 .fontWeight(.semibold)
                 .padding(.horizontal, MessageView.horizontalTextPadding)
 
