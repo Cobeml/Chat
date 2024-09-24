@@ -17,11 +17,17 @@ struct TextInputView: View {
 
     var body: some View {
         TextField("", text: $text, axis: .vertical)
+        
             .customFocus($globalFocusState.focus, equals: .uuid(inputFieldId))
             .placeholder(when: text.isEmpty) {
                 Text(style.placeholder)
                     .foregroundColor(theme.colors.buttonBackground)
             }
+            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    // No 'Done' button or toolbar
+                                }
+                            }
             .foregroundColor(style == .message ? theme.colors.textLightContext : theme.colors.textDarkContext)
             .padding(.vertical, 10)
             .padding(.leading, !availableInput.isMediaAvailable ? 12 : 0)

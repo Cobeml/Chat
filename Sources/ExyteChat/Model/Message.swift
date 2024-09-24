@@ -53,7 +53,7 @@ public struct Message: Identifiable, Hashable {
     public var attachments: [Attachment]
     public var recording: Recording?
     public var replyMessage: ReplyMessage?
-    public var type: String?
+    public var type: CustomMessageType = CustomMessageType.unknown
     public var triggerRedraw: UUID?
     public var requestStatus: String?
 
@@ -65,7 +65,7 @@ public struct Message: Identifiable, Hashable {
                 attachments: [Attachment] = [],
                 recording: Recording? = nil,
                 replyMessage: ReplyMessage? = nil,
-                type: String? = nil,
+                type: CustomMessageType = CustomMessageType.unknown,
                 requestStatus: String? = nil) {
 
         self.id = id
@@ -100,8 +100,8 @@ public struct Message: Identifiable, Hashable {
                     return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video)
                 }
             }
-
-            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: draft.type, requestStatus: draft.requestStatus)
+            let messageType = CustomMessageType(from: draft.type)
+            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus)
         }
 }
 
