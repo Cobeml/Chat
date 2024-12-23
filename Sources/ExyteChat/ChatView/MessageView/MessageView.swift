@@ -92,7 +92,7 @@ struct MessageView: View {
     var showAvatar: Bool {
         positionInUserGroup == .single
         || (chatType == .conversation && positionInUserGroup == .last)
-        || (chatType == .comments && positionInUserGroup == .first)
+        || (chatType == .comments && positionInUserGroup == .first) || message.type == .invite
     }
 
     var topPadding: CGFloat {
@@ -122,7 +122,7 @@ struct MessageView: View {
                 
                 HStack(alignment: .bottom, spacing: 0) {
                     
-                    
+                    avatarView
                     inviteView(message)
                 }
                 .padding(.top, topPadding)
@@ -442,6 +442,19 @@ struct MessageView: View {
                 VStack(spacing: 10) {
                     Button(action: {
                         // Accept button action
+                        if let groupId = message.attachments[0].groupId,
+                           let receiverId = message.receiverId,
+                           message.isGroupInvite {
+
+                            APIService.shared.acceptGroupInvite(groupId: groupId, userId: receiverId) { result in
+                                switch result {
+                                    case .success(let response):
+                                        print(response.message)
+                                    case .failure(let error):
+                                        print("Addition to grp Failed: \(error.localizedDescription)")
+                                }
+                            }
+                        }
                         tapActionClosure?(message, "approved")
                         requestStatus = "approved" // Update status to hide buttons
                     }) {
@@ -562,7 +575,7 @@ extension View {
             .background {
                 if isReply || !message.text.isEmpty || message.recording != nil {
                     RoundedRectangle(cornerRadius: radius)
-                        .foregroundColor(message.user.isCurrentUser ? theme.colors.myMessage : theme.colors.friendMessage)
+                        .foregroundColor(message.user.isCurrentUser ?  Color(hex: "bf9b30") : Color(hex: "d3d3d3"))
                         .opacity(isReply ? 0.5 : 1)
                 }
             }

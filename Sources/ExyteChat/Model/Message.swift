@@ -56,6 +56,9 @@ public struct Message: Identifiable, Hashable {
     public var type: CustomMessageType = CustomMessageType.unknown
     public var triggerRedraw: UUID?
     public var requestStatus: String?
+    public var receiverId: String?
+    public let isGroupInvite: Bool
+
 
     public init(id: String,
                 user: User,
@@ -66,8 +69,9 @@ public struct Message: Identifiable, Hashable {
                 recording: Recording? = nil,
                 replyMessage: ReplyMessage? = nil,
                 type: CustomMessageType = CustomMessageType.unknown,
-                requestStatus: String? = nil) {
-
+                requestStatus: String? = nil,
+                receiverId: String? = nil,
+                isGroupInvite: Bool = false) {
         self.id = id
         self.user = user
         self.status = status
@@ -78,6 +82,8 @@ public struct Message: Identifiable, Hashable {
         self.replyMessage = replyMessage
         self.type = type
         self.requestStatus = requestStatus
+        self.receiverId = receiverId
+        self.isGroupInvite = isGroupInvite
     }
 
     public static func makeMessage(
@@ -92,16 +98,16 @@ public struct Message: Identifiable, Hashable {
 
                 switch media.type {
                 case .image:
-                    return Attachment(id: UUID().uuidString, url: thumbnailURL, type: .image)
+                        return Attachment(id: UUID().uuidString, url: thumbnailURL, type: .image, groupId: draft.attachMent?.groupId)
                 case .video:
                     guard let fullURL = await media.getURL() else {
                         return nil
                     }
-                    return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video)
+                        return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video, groupId: draft.attachMent?.groupId)
                 }
             }
             let messageType = CustomMessageType(from: draft.type)
-            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus)
+            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus, receiverId: draft.receiverId, isGroupInvite: draft.isGroupInvite)
         }
 }
 
@@ -120,7 +126,9 @@ extension Message: Equatable {
         lhs.text == rhs.text &&
         lhs.attachments == rhs.attachments &&
         lhs.recording == rhs.recording &&
-        lhs.replyMessage == rhs.replyMessage
+        lhs.replyMessage == rhs.replyMessage &&
+        lhs.receiverId == rhs.receiverId &&
+        lhs.isGroupInvite == rhs.isGroupInvite
     }
 }
 

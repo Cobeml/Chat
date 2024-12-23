@@ -33,15 +33,17 @@ public struct Attachment: Codable, Identifiable, Hashable {
     public let thumbnail: URL
     public let full: URL
     public let type: AttachmentType
+    public let groupId: String?
 
-    public init(id: String, thumbnail: URL, full: URL, type: AttachmentType) {
+    public init(id: String, thumbnail: URL, full: URL, type: AttachmentType, groupId: String? = "") {
         self.id = id
         self.thumbnail = thumbnail
         self.full = full
         self.type = type
+        self.groupId = groupId
     }
 
-    public init(id: String, url: URL, type: AttachmentType) {
-        self.init(id: id, thumbnail: url, full: url, type: type)
+    public init(id: String, url: URL, type: AttachmentType, groupId: String? = "") {
+        self.init(id: id, thumbnail: url, full: url, type: type, groupId: groupId)
     }
 }
