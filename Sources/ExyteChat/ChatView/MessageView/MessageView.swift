@@ -444,7 +444,15 @@ struct MessageView: View {
                         // Accept button action
                         if let attendanceGroupId = message.attendanceGroupId,
                            let receiverId = message.receiverId {
-
+                            NotificationCenter.default.post(
+                                name: .updatePlanStatus,
+                                object: nil,
+                                userInfo: [
+                                    "planId": attendanceGroupId,
+                                    "receiverId": receiverId,
+                                    "status": "confirmed"
+                                ]
+                            )
                         }
                         if let groupId = message.attachments[0].groupId,
                            let receiverId = message.receiverId,
@@ -477,6 +485,18 @@ struct MessageView: View {
                     
                     Button(action: {
                         // Reject button action
+                        if let attendanceGroupId = message.attendanceGroupId,
+                           let receiverId = message.receiverId {
+                            NotificationCenter.default.post(
+                                name: .updatePlanStatus,
+                                object: nil,
+                                userInfo: [
+                                    "planId": attendanceGroupId,
+                                    "receiverId": receiverId,
+                                    "status": "cancelled"
+                                ]
+                            )
+                        }
                         tapActionClosure?(message, "rejected")
                         requestStatus = "rejected" // Update status to hide buttons
                     }) {
@@ -638,3 +658,7 @@ struct MessageView_Preview: PreviewProvider {
     }
 }
 #endif
+
+extension Notification.Name {
+    static let updatePlanStatus = Notification.Name("updatePlanStatus")
+}
