@@ -58,6 +58,7 @@ public struct Message: Identifiable, Hashable {
     public var requestStatus: String?
     public var receiverId: String?
     public let isGroupInvite: Bool
+    public let attendanceGroupId: String?
 
 
     public init(id: String,
@@ -71,7 +72,8 @@ public struct Message: Identifiable, Hashable {
                 type: CustomMessageType = CustomMessageType.unknown,
                 requestStatus: String? = nil,
                 receiverId: String? = nil,
-                isGroupInvite: Bool = false) {
+                isGroupInvite: Bool = false,
+                attendanceGroupId: String? = nil) {
         self.id = id
         self.user = user
         self.status = status
@@ -84,6 +86,7 @@ public struct Message: Identifiable, Hashable {
         self.requestStatus = requestStatus
         self.receiverId = receiverId
         self.isGroupInvite = isGroupInvite
+        self.attendanceGroupId = attendanceGroupId
     }
 
     public static func makeMessage(
@@ -107,7 +110,7 @@ public struct Message: Identifiable, Hashable {
                 }
             }
             let messageType = CustomMessageType(from: draft.type)
-            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus, receiverId: draft.receiverId, isGroupInvite: draft.isGroupInvite)
+            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus, receiverId: draft.receiverId, isGroupInvite: draft.isGroupInvite, attendanceGroupId: draft.attendanceGroupId)
         }
 }
 
@@ -128,7 +131,8 @@ extension Message: Equatable {
         lhs.recording == rhs.recording &&
         lhs.replyMessage == rhs.replyMessage &&
         lhs.receiverId == rhs.receiverId &&
-        lhs.isGroupInvite == rhs.isGroupInvite
+        lhs.isGroupInvite == rhs.isGroupInvite &&
+        lhs.attendanceGroupId == rhs.attendanceGroupId
     }
 }
 

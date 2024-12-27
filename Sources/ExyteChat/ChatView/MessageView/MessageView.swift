@@ -442,6 +442,10 @@ struct MessageView: View {
                 VStack(spacing: 10) {
                     Button(action: {
                         // Accept button action
+                        if let attendanceGroupId = message.attendanceGroupId,
+                           let receiverId = message.receiverId {
+
+                        }
                         if let groupId = message.attachments[0].groupId,
                            let receiverId = message.receiverId,
                            message.isGroupInvite {

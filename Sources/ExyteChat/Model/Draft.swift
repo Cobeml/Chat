@@ -17,6 +17,7 @@ public struct DraftMessage {
     public let attachMent: Attachment?
     public let receiverId: String?
     public let isGroupInvite: Bool
+    public let attendanceGroupId: String?
 
     public init(id: String? = nil, 
                 text: String,
@@ -28,7 +29,8 @@ public struct DraftMessage {
                 requestStatus:String? = nil,
                 attachMent: Attachment? = nil,
                 receiverId: String? = nil,
-                isGroupInvite: Bool = false) {
+                isGroupInvite: Bool = false,
+                attendanceGroupId: String? = nil) {
         self.id = id
         self.text = text
         self.medias = medias
@@ -40,5 +42,6 @@ public struct DraftMessage {
         self.attachMent = attachMent
         self.receiverId = receiverId
         self.isGroupInvite = isGroupInvite
+        self.attendanceGroupId = attendanceGroupId
     }
 }
