@@ -454,7 +454,7 @@ struct MessageView: View {
                                 ]
                             )
                         }
-                        if let groupId = message.attachments[0].groupId,
+                        if let groupId = message.attachments.first?.groupId,
                            let receiverId = message.receiverId,
                            message.isGroupInvite {
 
