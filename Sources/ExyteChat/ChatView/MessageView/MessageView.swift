@@ -9,6 +9,8 @@ import SwiftUI
 
 public enum CustomMessageType : String, Decodable {
     case invite = "invite"
+    case friendInvite = "friendinvite"
+    case planInvite = "planinvite"
     case join = "join"
     case like = "like"
     case friend = "friend"
@@ -55,7 +57,8 @@ struct MessageView: View {
     static let horizontalBubblePadding: CGFloat = 70
 
     @State private var requestStatus: String = ""
-    
+    @State private var shouldShowPlanInviteFullScreen: Bool = false
+
     var font: UIFont
 
     enum DateArrangement {
@@ -132,7 +135,20 @@ struct MessageView: View {
                 .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
                 .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
             }
-            else if message.type == .join {
+            else if message.type == .planInvite {
+
+                HStack(alignment: .bottom, spacing: 0) {
+
+                    avatarView
+                    planInviteView(message)
+                }
+                .padding(.top, topPadding)
+                .padding(.bottom, bottomPadding)
+                .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
+                //.padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
+                .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
+                .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+            } else if message.type == .join {
                 HStack(alignment: .bottom, spacing: 0) {
                     
                     
@@ -310,7 +326,89 @@ struct MessageView: View {
         .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
         .bubbleBackground(message, theme: theme, isReply: false)
     }
-    
+
+    @ViewBuilder
+    func planInviteView(_ message: Message) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !message.attachments.isEmpty {
+                ZStack {
+                    PlanInviteAttachmentMiniView(attachments: message.attachments) {_ in
+                        //viewModel.presentAttachmentFullScreen($0)
+                        shouldShowPlanInviteFullScreen = true
+                    }
+                    .contentShape(Rectangle())
+                    .overlay(
+                        Color.black.opacity(0.4)
+                        )
+                    .onTapGesture {
+                        shouldShowPlanInviteFullScreen = true
+                    }
+
+                    VStack {
+                        Spacer()
+
+                        HStack  {
+                            VStack(alignment: .leading) {
+                                HStack(spacing: 8) {
+                                    Text("Blank Street")
+                                    Text("$ $ ")
+                                }
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+
+                                Text("08:30 PM")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+                                    .padding(.top, 2)
+                            }
+
+                            Spacer()
+
+                            VStack{
+                                Button(action: {approveAction(for: message)}) {
+                                    Text("Accept")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.black)
+                                        .frame(width: 60, height: 20)
+                                        .background(Color.white)
+                                        .cornerRadius(14)
+                                }
+                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                                .padding(.top, 2)
+
+                                Button(action: {rejectAction(for: message)}) {
+                                    Text("Decline")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.black)
+                                        .frame(width: 60, height: 20)
+                                        .background(Color.white)
+                                        .cornerRadius(14)
+                                }
+                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                                .padding(.top, 2)
+                            }
+                            .padding(.leading, 4)
+
+                        }
+                    }
+                    .padding(.bottom, 10)
+                    .padding(.horizontal, 5)
+                }
+            }
+
+          //actionButtons(for: message)
+
+        }
+        .padding(.vertical, 0)
+        .frame(width: MessageView.widthWithMedia + additionalMediaInset)
+        .bubbleBackground(message, theme: theme, isReply: false)
+        .sheet(isPresented: $shouldShowPlanInviteFullScreen) {
+            PlanInviteAttachmentFullPageView(user: message.user ,attachment: message.attachments.first!)
+        }
+    }
+
     @ViewBuilder
     func joinView(_ message: Message) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -432,6 +530,54 @@ struct MessageView: View {
         .contentShape(Rectangle())
     }
 
+    func approveAction(for message: Message) {
+            // Accept button action
+            if let attendanceGroupId = message.attendanceGroupId,
+               let receiverId = message.receiverId {
+                NotificationCenter.default.post(
+                    name: .updatePlanStatus,
+                    object: nil,
+                    userInfo: [
+                        "planId": attendanceGroupId,
+                        "receiverId": receiverId,
+                        "status": "confirmed"
+                    ]
+                )
+            }
+            if let groupId = message.attachments.first?.groupId,
+               let receiverId = message.receiverId,
+               message.isGroupInvite {
+
+                APIService.shared.acceptGroupInvite(groupId: groupId, userId: receiverId) { result in
+                    switch result {
+                        case .success(let response):
+                            print(response.message)
+                        case .failure(let error):
+                            print("Addition to grp Failed: \(error.localizedDescription)")
+                    }
+                }
+            }
+            tapActionClosure?(message, "approved")
+            requestStatus = "approved" // Update status to hide buttons
+    }
+
+    func rejectAction(for message: Message) {
+        // Reject button action
+        if let attendanceGroupId = message.attendanceGroupId,
+           let receiverId = message.receiverId {
+            NotificationCenter.default.post(
+                name: .updatePlanStatus,
+                object: nil,
+                userInfo: [
+                    "planId": attendanceGroupId,
+                    "receiverId": receiverId,
+                    "status": "cancelled"
+                ]
+            )
+        }
+        tapActionClosure?(message, "rejected")
+        requestStatus = "rejected" // Update status to hide buttons
+    }
     
     @ViewBuilder
     private func actionButtons(for message: Message) -> some View {
@@ -598,9 +744,16 @@ extension View {
             .foregroundColor(message.user.isCurrentUser ? theme.colors.textDarkContext : theme.colors.textLightContext)
             .background {
                 if isReply || !message.text.isEmpty || message.recording != nil {
-                    RoundedRectangle(cornerRadius: radius)
-                        .foregroundColor(message.user.isCurrentUser ?  Color(hex: "bf9b30") : Color(hex: "d3d3d3"))
-                        .opacity(isReply ? 0.5 : 1)
+                    if message.user.isCurrentUser {
+                        RoundedRectangle(cornerRadius: radius)
+                            .stroke(Color(hex: "d3d3d3"), lineWidth: 2)
+                            .foregroundColor(.white.opacity(0.09))
+                            .opacity(isReply ? 0.5 : 1)
+                    } else {
+                        RoundedRectangle(cornerRadius: radius)
+                            .foregroundColor(Color(hex: "d3d3d3"))
+                            .opacity(isReply ? 0.5 : 1)
+                    }
                 }
             }
             .cornerRadius(radius)
