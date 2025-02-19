@@ -125,12 +125,13 @@ struct VideoPlayerInviteUserView: View {
 
                 // MARK: - User Info Section
                 HStack {
-                    HStack(alignment: .center, spacing: 60) {
+                    HStack(spacing: 2) {
                         // Profile Image
                         ProfilePictureView(user: user)
                             .frame(width: 90, height: 90)  // Profile picture size
                             .padding(.horizontal, -10)  // Negative padding might cause overlap
 
+                        Spacer()
                         // User Details
                         VStack(alignment: .leading, spacing: 8) {
                             // Occupation Pill
@@ -142,14 +143,22 @@ struct VideoPlayerInviteUserView: View {
                             ButtonPillView(text: "Add +1", color: .white)
                         }
                         .frame(width: 90)
-                        .padding(.top, -20)
+                        .padding(.bottom, 20)
+
+                        Spacer()
 
                         //Spacer()
                         VStack{
-                            Text("08:30 PM Tonight")
+                            Text("08:30 PM")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.white)
                                 .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+
+                            Text("Tonight")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+
                             Button(action: onAccept) {
                                 Text("Accept")
                                     .font(.system(size: 14, weight: .medium))
@@ -178,7 +187,7 @@ struct VideoPlayerInviteUserView: View {
 
                     Spacer()
                 }
-                .padding(.bottom, 100)  // Space from bottom of screen
+                .padding(.bottom, 50)  // Space from bottom of screen
             }
         }
     }
@@ -190,10 +199,11 @@ struct ProfilePictureView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 4) {
-            AvatarView(url: user.avatarURL, avatarSize: 40)
+            AvatarView(url: user.avatarURL, avatarSize: 90)
                 .contentShape(Circle())
             HStack(spacing: 4) {
-                Text(user.name)
+                let name = user.name.components(separatedBy: " ").first ?? ""
+                Text(name)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 0)

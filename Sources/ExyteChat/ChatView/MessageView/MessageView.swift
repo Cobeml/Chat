@@ -357,7 +357,7 @@ struct MessageView: View {
                                 .foregroundColor(.white)
                                 .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
 
-                                Text("08:30 PM")
+                                Text("08:30 PM Tonight")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                                     .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
@@ -366,30 +366,30 @@ struct MessageView: View {
 
                             Spacer()
 
-                            VStack{
-                                Button(action: {approveAction(for: message)}) {
-                                    Text("Accept")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.black)
-                                        .frame(width: 60, height: 20)
-                                        .background(Color.white)
-                                        .cornerRadius(14)
-                                }
-                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
-                                .padding(.top, 2)
-
-                                Button(action: {rejectAction(for: message)}) {
-                                    Text("Decline")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.black)
-                                        .frame(width: 60, height: 20)
-                                        .background(Color.white)
-                                        .cornerRadius(14)
-                                }
-                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
-                                .padding(.top, 2)
-                            }
-                            .padding(.leading, 4)
+//                            VStack{
+//                                Button(action: {approveAction(for: message)}) {
+//                                    Text("Accept")
+//                                        .font(.system(size: 12, weight: .medium))
+//                                        .foregroundColor(.black)
+//                                        .frame(width: 60, height: 20)
+//                                        .background(Color.white)
+//                                        .cornerRadius(14)
+//                                }
+//                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+//                                .padding(.top, 2)
+//
+//                                Button(action: {rejectAction(for: message)}) {
+//                                    Text("Decline")
+//                                        .font(.system(size: 12, weight: .medium))
+//                                        .foregroundColor(.black)
+//                                        .frame(width: 60, height: 20)
+//                                        .background(Color.white)
+//                                        .cornerRadius(14)
+//                                }
+//                                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+//                                .padding(.top, 2)
+//                            }
+//                            .padding(.leading, 4)
 
                         }
                     }
@@ -398,8 +398,7 @@ struct MessageView: View {
                 }
             }
 
-          //actionButtons(for: message)
-
+          actionButtons(for: message)
         }
         .padding(.vertical, 0)
         .frame(width: MessageView.widthWithMedia + additionalMediaInset)
