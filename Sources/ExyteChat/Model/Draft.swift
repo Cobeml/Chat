@@ -18,6 +18,7 @@ public struct DraftMessage {
     public let receiverId: String?
     public let isGroupInvite: Bool
     public let attendanceGroupId: String?
+    public let reelData : ReelModel?
 
     public init(id: String? = nil, 
                 text: String,
@@ -28,6 +29,7 @@ public struct DraftMessage {
                 type: String? = nil,
                 requestStatus:String? = nil,
                 attachMent: Attachment? = nil,
+                reelData : ReelModel? = nil,
                 receiverId: String? = nil,
                 isGroupInvite: Bool = false,
                 attendanceGroupId: String? = nil) {
@@ -40,6 +42,7 @@ public struct DraftMessage {
         self.type = type
         self.requestStatus = requestStatus
         self.attachMent = attachMent
+        self.reelData = reelData
         self.receiverId = receiverId
         self.isGroupInvite = isGroupInvite
         self.attendanceGroupId = attendanceGroupId

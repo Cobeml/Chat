@@ -59,6 +59,13 @@ public struct Message: Identifiable, Hashable {
     public var receiverId: String?
     public let isGroupInvite: Bool
     public let attendanceGroupId: String?
+    
+    // reel details
+    public let venueName : String?
+    public let venueTime : String?
+    public let venuePrice : String?
+    public let AIdescription : String?
+    
 
 
     public init(id: String,
@@ -73,7 +80,14 @@ public struct Message: Identifiable, Hashable {
                 requestStatus: String? = nil,
                 receiverId: String? = nil,
                 isGroupInvite: Bool = false,
-                attendanceGroupId: String? = nil) {
+                attendanceGroupId: String? = nil,
+                
+                venueName : String? = nil,
+                venueTime : String? = nil,
+                venuePrice : String? = nil,
+                AIdescription : String? = nil
+    
+    ) {
         self.id = id
         self.user = user
         self.status = status
@@ -87,6 +101,12 @@ public struct Message: Identifiable, Hashable {
         self.receiverId = receiverId
         self.isGroupInvite = isGroupInvite
         self.attendanceGroupId = attendanceGroupId
+        
+        
+        self.venueName = venueName
+        self.venueTime = venueTime
+        self.venuePrice = venuePrice
+        self.AIdescription = AIdescription
     }
 
     public static func makeMessage(
@@ -109,8 +129,26 @@ public struct Message: Identifiable, Hashable {
                         return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video, groupId: draft.attachMent?.groupId)
                 }
             }
+            
+            var venueName: String? = nil
+            var venueTime: String? = nil
+            var venuePrice: String? = nil
+            var AIdescription: String? = nil
+
+            if let reeldata = draft.reelData{
+                venueName = reeldata.venueName
+                venueTime = reeldata.venueTime
+                venuePrice = reeldata.venuePrice
+                AIdescription = reeldata.AIdescription
+            }
+            
             let messageType = CustomMessageType(from: draft.type)
-            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus, receiverId: draft.receiverId, isGroupInvite: draft.isGroupInvite, attendanceGroupId: draft.attendanceGroupId)
+            return Message(id: id, user: user, status: status, createdAt: draft.createdAt, text: draft.text, attachments: attachments, recording: draft.recording, replyMessage: draft.replyMessage, type: messageType, requestStatus: draft.requestStatus, receiverId: draft.receiverId, isGroupInvite: draft.isGroupInvite, attendanceGroupId: draft.attendanceGroupId,
+                           venueName: venueName,
+                           venueTime: venueTime,
+                           venuePrice: venuePrice,
+                           AIdescription: AIdescription
+            )
         }
 }
 
@@ -132,7 +170,13 @@ extension Message: Equatable {
         lhs.replyMessage == rhs.replyMessage &&
         lhs.receiverId == rhs.receiverId &&
         lhs.isGroupInvite == rhs.isGroupInvite &&
-        lhs.attendanceGroupId == rhs.attendanceGroupId
+        lhs.attendanceGroupId == rhs.attendanceGroupId &&
+        lhs.venueName == rhs.venueName &&
+        lhs.venueTime == rhs.venueTime &&
+        lhs.venuePrice == rhs.venuePrice &&
+        lhs.AIdescription == rhs.AIdescription
+//       && lhs.videoURL == rhs.videoURL
+
     }
 }
 

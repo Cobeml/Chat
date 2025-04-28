@@ -89,14 +89,13 @@ struct MessageMenu<MainButton: View, ActionEnum: MessageMenuAction>: View {
             }
 
             ZStack {
-                theme.colors.friendMessage
+                Color(hex: "1a1a1a")
                     .background(.ultraThinMaterial)
                     .environment(\.colorScheme, .light)
-                    .opacity(0.5)
                     .cornerRadius(12)
                 HStack {
                     Text(title)
-                        .foregroundColor(theme.colors.textLightContext)
+                        .foregroundColor(Color.white)
                     Spacer()
                     icon
                 }

@@ -37,6 +37,7 @@ struct ChatMessageView<MessageContent: View>: View {
                         self.viewModel.presentAttachmentFullScreen(attachment)
                     }
             } else {
+//                let _ = debugPrint("❌❌❌ \(row.message)")
                 MessageView(
                     viewModel: viewModel,
                     message: row.message,

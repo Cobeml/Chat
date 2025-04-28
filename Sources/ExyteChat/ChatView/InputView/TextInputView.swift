@@ -5,34 +5,29 @@
 import SwiftUI
 
 struct TextInputView: View {
-
     @Environment(\.chatTheme) private var theme
-
-    @EnvironmentObject private var globalFocusState: GlobalFocusState
-
     @Binding var text: String
     var inputFieldId: UUID
     var style: InputViewStyle
     var availableInput: AvailableInputType
 
+    @FocusState private var isFocused: Bool  // 👈 Replace GlobalFocusState
+
     var body: some View {
         TextField("", text: $text, axis: .vertical)
-        
-            .customFocus($globalFocusState.focus, equals: .uuid(inputFieldId))
+            .tint(Color(hex: "e8b717"))
+            .focused($isFocused) // 👈 Use FocusState instead of customFocus
             .placeholder(when: text.isEmpty) {
                 Text(style.placeholder)
                     .foregroundColor(theme.colors.buttonBackground)
             }
-            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    // No 'Done' button or toolbar
-                                }
-                            }
-            .foregroundColor(style == .message ? theme.colors.textLightContext : theme.colors.textDarkContext)
+            .foregroundColor(.white)
             .padding(.vertical, 10)
             .padding(.leading, !availableInput.isMediaAvailable ? 12 : 0)
             .onTapGesture {
-                globalFocusState.focus = .uuid(inputFieldId)
+                isFocused = true
             }
     }
 }
+
+

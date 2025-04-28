@@ -15,7 +15,7 @@ public enum InputViewStyle {
     var placeholder: String {
         switch self {
         case .message:
-            return "Type a message..."
+            return "Message"
         case .signature:
             return "Add signature..."
         }
@@ -266,16 +266,19 @@ struct InputView: View {
 
     @ViewBuilder
     var viewOnTop: some View {
+        let color = Color(hex: "e8b717")
         if let message = viewModel.attachments.replyMessage {
             VStack(spacing: 8) {
                 Rectangle()
-                    .foregroundColor(theme.colors.friendMessage)
-                    .frame(height: 2)
+                    .foregroundColor(color.opacity(0.5))
+                    .frame(height: 1.5)
 
                 HStack {
                     theme.images.reply.replyToMessage
+                        .renderingMode(.template)
+                        .foregroundColor(color)
                     Capsule()
-                        .foregroundColor(theme.colors.myMessage)
+                        .foregroundColor(color)
                         .frame(width: 2)
                     VStack(alignment: .leading) {
                         Text("Reply to \(message.user.name)")
@@ -283,9 +286,9 @@ struct InputView: View {
                             .foregroundColor(theme.colors.buttonBackground)
                         if !message.text.isEmpty {
                             textView(message.text)
-                                .font(.caption2)
+                                .font(.system(size: 13, weight: .medium, design: .default))
                                 .lineLimit(1)
-                                .foregroundColor(theme.colors.textLightContext)
+                                .foregroundColor(Color.white)
                         }
                     }
                     .padding(.vertical, 2)
@@ -306,6 +309,8 @@ struct InputView: View {
                     }
 
                     theme.images.reply.cancelReply
+                        .renderingMode(.template)
+                        .foregroundColor(Color(hex: "e8b717"))
                         .onTapGesture {
                             viewModel.attachments.replyMessage = nil
                         }
@@ -361,16 +366,22 @@ struct InputView: View {
         Button {
             onAction(.send)
         } label: {
-            theme.images.inputView.arrowSend
-                .viewSize(48)
-                .circleBackground(theme.colors.sendButtonBackground)
+            Image(systemName: "paperplane.fill")
+                .renderingMode(.original)
+                .resizable()
+                .foregroundColor(theme.colors.sendButtonBackground)
+                .viewSize(27)
+                .rotationEffect(Angle(degrees: 45))
+                .padding(.trailing, 10)
         }
     }
 
     var recordButton: some View {
-        theme.images.inputView.microphone
-            .viewSize(48)
-            .circleBackground(theme.colors.sendButtonBackground)
+        Image(systemName: "microphone.fill")
+            .renderingMode(.template)
+            .resizable()
+            .frame(width: 17, height: 27)
+            .foregroundColor(theme.colors.sendButtonBackground)
             .frameGetter($recordButtonFrame)
     }
 
@@ -390,6 +401,8 @@ struct InputView: View {
             onAction(.stopRecordAudio)
         } label: {
             theme.images.recordAudio.stopRecord
+                .renderingMode(.template)
+                .foregroundColor(.black)
                 .viewSize(28)
                 .background(
                     Capsule()
@@ -405,7 +418,12 @@ struct InputView: View {
         } label: {
             VStack(spacing: 20) {
                 theme.images.recordAudio.lockRecord
+                    .renderingMode(.template)
+                    .foregroundColor(.black)
+                
                 theme.images.recordAudio.sendRecord
+                    .renderingMode(.template)
+                    .foregroundColor(.black)
             }
             .frame(width: 28)
             .padding(.vertical, 16)
@@ -426,9 +444,12 @@ struct InputView: View {
             } label: {
                 HStack {
                     theme.images.recordAudio.cancelRecord
+                        .renderingMode(.template)
+                        .foregroundStyle(Color.white)
+                    
                     Text("Cancel")
                         .font(.footnote)
-                        .foregroundColor(theme.colors.textLightContext)
+                        .foregroundColor(Color.white)
                 }
             }
             Spacer()
@@ -440,7 +461,7 @@ struct InputView: View {
             Spacer()
             Text("Recording...")
                 .font(.footnote)
-                .foregroundColor(theme.colors.textLightContext)
+                .foregroundColor(Color.white)
             Spacer()
         }
     }
@@ -456,7 +477,7 @@ struct InputView: View {
 
     var recordDuration: some View {
         Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
-            .foregroundColor(theme.colors.textLightContext)
+            .foregroundColor(Color.white)
             .opacity(0.6)
             .font(.caption2)
             .monospacedDigit()

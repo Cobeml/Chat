@@ -5,6 +5,8 @@
 //  Created by Alisa Mylnikova on 14.03.2023.
 //
 
+// used for recording, playing and pausing audio
+
 import SwiftUI
 
 struct RecordWaveformWithButtons: View {
@@ -37,6 +39,9 @@ struct RecordWaveformWithButtons: View {
             .foregroundColor(colorButton)
             .viewSize(40)
             .circleBackground(colorButtonBg)
+            .overlay(
+                Circle().stroke(colorButton, lineWidth: 1) // Border
+            )
             .onTapGesture {
                 recordPlayer.togglePlay(recording)
             }

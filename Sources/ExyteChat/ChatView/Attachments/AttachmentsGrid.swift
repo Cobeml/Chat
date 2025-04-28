@@ -45,9 +45,10 @@ struct AttachmentsGrid: View {
         VStack(spacing: 4) {
             if let attachment = single {
                 AttachmentCell(attachment: attachment, onTap: onTap)
-                    .frame(width: 204, height: grid.isEmpty ? 200 : 100)
+//                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 200, height: grid.isEmpty ? 200 : 100)
                     .clipped()
-                    .cornerRadius(onlyOne ? 0 : 12)
+                    .cornerRadius(onlyOne ? 11 : 12)
             }
             if !grid.isEmpty {
                 ForEach(pair(), id: \.id) { pair in

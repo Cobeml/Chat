@@ -12,8 +12,8 @@ struct MessageTimeView: View {
 
     var body: some View {
         Text(text)
-            .font(.caption)
-            .foregroundColor(isCurrentUser ? chatTheme.colors.myMessageTime : chatTheme.colors.frientMessageTime)
+            .font(.system(size: 8, weight: .medium, design: .default))
+            .foregroundColor(isCurrentUser ? chatTheme.colors.myMessageTime : Color.white.opacity(0.6))
     }
 }
 
@@ -25,7 +25,7 @@ struct MessageTimeWithCapsuleView: View {
 
     var body: some View {
         Text(text)
-            .font(.caption)
+            .font(.system(size: 10, weight: .medium, design: .default))
             .foregroundColor(chatTheme.colors.timeCapsuleForeground)
             .opacity(0.8)
             .padding(.top, 4)

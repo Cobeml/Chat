@@ -12,6 +12,7 @@ struct AttachmentCell: View {
     let onTap: (Attachment) -> Void
 
     var body: some View {
+//        let _ = debugPrint(" jnjnj 🔴 \(attachment.type)")
         Group {
             if attachment.type == .image {
                 content
