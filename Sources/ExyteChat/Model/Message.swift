@@ -127,6 +127,7 @@ public struct Message: Identifiable, Hashable {
                         return nil
                     }
                         return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video, groupId: draft.attachMent?.groupId)
+                
                 }
             }
             
@@ -139,7 +140,7 @@ public struct Message: Identifiable, Hashable {
                 venueName = reeldata.venueName
                 venueTime = reeldata.venueTime
                 venuePrice = reeldata.venuePrice
-                AIdescription = reeldata.AIdescription
+                AIdescription = reeldata.aiDescription
             }
             
             let messageType = CustomMessageType(from: draft.type)

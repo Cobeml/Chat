@@ -168,14 +168,19 @@ struct MessageView: View {
             }
             else if message.type == .join {
                 HStack(alignment: .bottom, spacing: 0) {
-                    joinView(message)
-                }
-                .padding(.top, topPadding)
-                .padding(.bottom, bottomPadding)
-                .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
-                //.padding(message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding)
-                .padding(message.user.isCurrentUser ? .trailing : .leading, 5)
-                .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
+                    if hasYouTubeShortsURL(message) {
+                                           // Show YouTube Shorts preview with accept/reject buttons
+                                           youTubeShortsInviteView(message)
+                                       } else {
+                                           // Show regular join view with attachments
+                                           regularJoinView(message)
+                                       }
+                    }
+                    .padding(.top, topPadding + 8)
+                    .padding(.bottom, bottomPadding + 8)
+                    .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
+                    .padding(message.user.isCurrentUser ? .trailing : .leading, 10)
+                    .frame(maxWidth: UIScreen.main.bounds.width, alignment: message.user.isCurrentUser ? .trailing : .leading)
             }
             else if message.type == .like {
                 HStack(alignment: .bottom, spacing: 0) {
@@ -1410,3 +1415,1571 @@ struct MessageView_Preview: PreviewProvider {
 extension Notification.Name {
     static let updatePlanStatus = Notification.Name("updatePlanStatus")
 }
+
+
+
+import SwiftUI
+
+import WebKit
+
+// MARK: - Full Screen YouTube Modal
+struct YouTubeFullScreenModal: View {
+    @Environment(\.dismiss) var dismiss
+    let videoID: String
+    let videoTitle: String
+    let originalURL: String
+    
+    @State private var isLoading = true
+    @State private var showingShareSheet = false
+    
+    var body: some View {
+        ZStack {
+            // Background
+            Color.black
+                .ignoresSafeArea(.all)
+            
+            VStack(spacing: 0) {
+                // Navigation Header
+                NavigationHeader(
+                    title: videoTitle,
+                    onBack: { dismiss() },
+                    onShare: { showingShareSheet = true }
+                )
+                
+                // Main Video Player
+                VideoPlayerContainer(
+                    videoID: videoID,
+                    isLoading: $isLoading
+                )
+                
+                // Loading Overlay
+                if isLoading {
+                    VideoLoadingOverlay()
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .statusBarHidden()
+        .sheet(isPresented: $showingShareSheet) {
+            ShareSheet(activityItems: [originalURL])
+        }
+    }
+}
+
+// MARK: - Navigation Header Component
+struct NavigationHeader: View {
+    let title: String
+    let onBack: () -> Void
+    let onShare: () -> Void
+    
+    var body: some View {
+        HStack {
+            // Back Button
+            BackButton(action: onBack)
+            
+            Spacer()
+            
+            // Title
+            VideoTitle(title: title)
+            
+            Spacer()
+            
+            // Share Button
+            ShareButton(action: onShare)
+        }
+        .padding(.top, 50) // Safe area compensation
+        .padding(.bottom, 20)
+        .padding(.horizontal, 20)
+        .background(headerBackground)
+    }
+    
+    private var headerBackground: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color.black.opacity(0.95),
+                Color.black.opacity(0.8),
+                Color.clear
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Back Button Component
+struct BackButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text("Back")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(Color.black.opacity(0.3))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Video Title Component
+struct VideoTitle: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+}
+
+// MARK: - Share Button Component
+struct ShareButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.white)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color.black.opacity(0.3))
+                .clipShape(Circle())
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Video Player Container
+struct VideoPlayerContainer: View {
+    let videoID: String
+    @Binding var isLoading: Bool
+    
+    var body: some View {
+        GeometryReader { geometry in
+            SimpleYouTubePlayerView(videoID: videoID, isLoading: $isLoading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .clipShape(RoundedRectangle(cornerRadius: 0))
+        }
+    }
+}
+
+// MARK: - Video Loading Overlay
+struct VideoLoadingOverlay: View {
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.8)
+                .ignoresSafeArea()
+            
+            // Loading content
+            VStack(spacing: 20) {
+                // Animated loading spinner
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(2.0)
+                
+                // Loading text
+                Text("Loading video...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                
+                // YouTube branding
+                HStack(spacing: 8) {
+                    Image(systemName: "play.rectangle.fill")
+                        .foregroundColor(.red)
+                        .font(.title2)
+                    
+                    Text("YouTube")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .padding(.top, 10)
+            }
+        }
+    }
+}
+
+// MARK: - Share Sheet
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
+    }
+}
+
+// MARK: - Updated YouTube Shorts Content View
+struct YouTubeShortsContentView: View {
+    let message: Message
+    @Binding var requestStatus: String
+    let onAccept: () -> Void
+    let onReject: () -> Void
+    
+    @State private var showFullScreen = false
+    @State private var videoTitle: String = "Video Invitation"
+    @State private var extractedThumbnail: String = ""
+    @State private var videoID: String = ""
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            if let attachment = message.attachments.first {
+                YouTubeShortsPreviewCard(
+                    youtubeURL: attachment.full.absoluteString,
+                    thumbnailURL: extractedThumbnail.isEmpty ? attachment.thumbnail.absoluteString : extractedThumbnail,
+                    videoTitle: videoTitle,
+                    onTap: { showFullScreen = true }
+                )
+                .padding(.horizontal, 12)
+                
+                if shouldShowButtons {
+                    AcceptRejectButtonsView(
+                        onAccept: onAccept,
+                        onReject: onReject
+                    )
+                }
+            }
+        }
+        .sheet(isPresented: $showFullScreen) {
+            SimpleYouTubePlayerView(videoID: videoID)
+        }
+        .onAppear {
+            extractVideoInfo()
+        }
+    }
+    
+    private var shouldShowButtons: Bool {
+        let isPending = message.requestStatus == "pending" || requestStatus == "pending"
+        let isNotCurrentUser = !message.user.isCurrentUser
+        let isNotProcessed = requestStatus != "approved" && requestStatus != "rejected"
+        
+        return isPending && isNotCurrentUser && isNotProcessed
+    }
+    
+    private func extractVideoInfo() {
+        guard let attachment = message.attachments.first,
+              let extractedVideoID = extractVideoId(from: attachment.full.absoluteString) else {
+            return
+        }
+        
+        videoID = extractedVideoID
+        extractedThumbnail = "https://img.youtube.com/vi/\(extractedVideoID)/maxresdefault.jpg"
+        
+        // Set a better title if available
+        if let venueName = message.venueName, !venueName.isEmpty {
+            videoTitle = "\(message.user.name) invites you to \(venueName)"
+        } else {
+            videoTitle = "\(message.user.name)'s Video Invitation"
+        }
+    }
+    
+    private func extractVideoId(from url: String) -> String? {
+        if let range = url.range(of: "shorts/") {
+            let afterShorts = String(url[range.upperBound...])
+            if let queryRange = afterShorts.range(of: "?") {
+                return String(afterShorts[..<queryRange.lowerBound])
+            }
+            return afterShorts
+        }
+        return nil
+    }
+}
+
+// MARK: - Alternative Compact Full Screen Modal (if you prefer simpler)
+struct CompactYouTubeModal: View {
+    @Environment(\.dismiss) var dismiss
+    let videoID: String
+    let videoTitle: String
+    
+    @State private var isLoading = true
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack {
+                // Simple header
+                HStack {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(.white)
+                        .padding()
+                    
+                    Spacer()
+                    
+                    Text(videoTitle)
+                        .foregroundColor(.white)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    Color.clear.frame(width: 60) // Balance the Done button
+                }
+                .background(Color.black.opacity(0.8))
+                
+                // Video player
+                SimpleYouTubePlayerView(videoID: videoID, isLoading: $isLoading)
+                
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Text("Loading...")
+                            .foregroundColor(.white)
+                            .padding(.top)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.8))
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+
+struct SimpleYouTubePlayerView: UIViewRepresentable {
+    let videoID: String
+    @Binding var isLoading: Bool
+    
+    init(videoID: String, isLoading: Binding<Bool> = .constant(false)) {
+        self.videoID = videoID
+        self._isLoading = isLoading
+    }
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences = preferences
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.scrollView.isScrollEnabled = false
+        webView.backgroundColor = .black
+        webView.isOpaque = false
+        webView.navigationDelegate = context.coordinator
+        
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
+        
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "www.youtube.com"
+        components.path = "/embed/\(videoID)"
+        components.queryItems = [
+            URLQueryItem(name: "autoplay", value: "1"),
+            URLQueryItem(name: "playsinline", value: "1"),
+            URLQueryItem(name: "controls", value: "0"),
+            URLQueryItem(name: "showinfo", value: "0"),
+            URLQueryItem(name: "rel", value: "0"),
+            URLQueryItem(name: "mute", value: "1"),
+            URLQueryItem(name: "origin", value: "https://www.youtube.com")
+        ]
+        
+        guard let embedURL = components.url else {
+            return
+        }
+        
+        var request = URLRequest(url: embedURL)
+        request.setValue("https://www.youtube.com", forHTTPHeaderField: "Referer")
+        request.setValue("no-referrer-when-downgrade", forHTTPHeaderField: "Referrer-Policy")
+        
+        webView.load(request)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: SimpleYouTubePlayerView
+        
+        init(_ parent: SimpleYouTubePlayerView) {
+            self.parent = parent
+        }
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            parent.isLoading = true
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            parent.isLoading = false
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            parent.isLoading = false
+        }
+    }
+}
+
+// MARK: - Simple Invite Header Component
+struct InviteHeaderView: View {
+    let message: Message
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            UserAvatarView(userName: message.user.name)
+            
+            InviteTextView(message: message)
+            
+            Spacer()
+            
+            InviteIconView()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+    }
+}
+
+// MARK: - User Avatar Component
+struct UserAvatarView: View {
+    let userName: String
+    
+    var body: some View {
+        Circle()
+            .fill(Color.gray.opacity(0.3))
+            .frame(width: 40, height: 40)
+            .overlay(
+                Text(String(userName.prefix(1)))
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            )
+    }
+}
+
+// MARK: - Invite Text Component
+struct InviteTextView: View {
+    let message: Message
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(message.user.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text(inviteTypeText)
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray)
+            }
+            
+            if let venueName = message.venueName, !venueName.isEmpty {
+                Text(venueName)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "e8b717"))
+                    .fontWeight(.medium)
+            }
+        }
+    }
+    
+    private var inviteTypeText: String {
+        switch message.type {
+        case .invite:
+            return "sent an invite"
+        case .planInvite:
+            return "invites you to"
+        case .join:
+            return "wants you to join"
+        default:
+            return "shared a video"
+        }
+    }
+}
+
+// MARK: - Invite Icon Component
+struct InviteIconView: View {
+    var body: some View {
+        Image(systemName: "video.circle")
+            .foregroundColor(Color(hex: "e8b717"))
+            .font(.title2)
+    }
+}
+
+// MARK: - YouTube Thumbnail Component
+struct YouTubeThumbnailView: View {
+    let thumbnailURL: String?
+    let cropWidth: CGFloat
+    let cropHeight: CGFloat
+    
+    var body: some View {
+        Group {
+            if let urlString = thumbnailURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        thumbnailImageView(image)
+                    case .failure(_):
+                        fallbackView
+                    case .empty:
+                        loadingView
+                    @unknown default:
+                        fallbackView
+                    }
+                }
+            } else {
+                fallbackView
+            }
+        }
+    }
+    
+    private func thumbnailImageView(_ image: Image) -> some View {
+        image
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: cropWidth, height: cropHeight)
+            .clipped()
+    }
+    
+    private var loadingView: some View {
+        ZStack {
+            Color.gray.opacity(0.3)
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+        }
+        .frame(width: cropWidth, height: cropHeight)
+    }
+    
+    private var fallbackView: some View {
+        YouTubeFallbackView(width: cropWidth, height: cropHeight)
+    }
+}
+
+// MARK: - YouTube Fallback Component
+struct YouTubeFallbackView: View {
+    let width: CGFloat
+    let height: CGFloat
+    
+    var body: some View {
+        ZStack {
+            backgroundGradient
+            contentView
+        }
+    }
+    
+    private var backgroundGradient: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color.red.opacity(0.8),
+                Color.red.opacity(0.4),
+                Color.black
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(width: width, height: height)
+    }
+    
+    private var contentView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "play.rectangle.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 50, height: 50)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 4) {
+                Text("YouTube")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("Shorts")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+        }
+    }
+}
+
+// MARK: - Video Overlay Component
+struct VideoOverlayView: View {
+    let videoTitle: String
+    
+    var body: some View {
+        VStack {
+            shortsBadge
+            Spacer()
+            playButton
+            Spacer()
+            titleSection
+        }
+    }
+    
+    private var shortsBadge: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: 4) {
+                Image(systemName: "play.rectangle.fill")
+                    .foregroundColor(.white)
+                    .font(.caption)
+                Text("Shorts")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .padding(8)
+            .background(Color.black.opacity(0.7))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.top, 12)
+            .padding(.trailing, 12)
+        }
+    }
+    
+    private var playButton: some View {
+        Image(systemName: "play.circle.fill")
+            .foregroundColor(.white)
+            .font(.system(size: 60))
+            .shadow(color: .black.opacity(0.5), radius: 15)
+    }
+    
+    private var titleSection: some View {
+        VStack(spacing: 8) {
+            if !videoTitle.isEmpty {
+                Text(videoTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, 16)
+            }
+            
+            Text("Tap to watch")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .padding(.vertical, 16)
+        .background(titleBackground)
+    }
+    
+    private var titleBackground: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Accept/Reject Buttons Component
+struct AcceptRejectButtonsView: View {
+    let onAccept: () -> Void
+    let onReject: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            rejectButton
+            acceptButton
+        }
+        .padding(.horizontal, 8)
+    }
+    
+    private var rejectButton: some View {
+        Button(action: onReject) {
+            HStack(spacing: 8) {
+                Image(systemName: "xmark.circle")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Decline")
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(rejectButtonBackground)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var rejectButtonBackground: some View {
+        RoundedRectangle(cornerRadius: 28)
+            .fill(Color.red.opacity(0.15))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28)
+                    .stroke(Color.red.opacity(0.6), lineWidth: 1.5)
+            )
+    }
+    
+    private var acceptButton: some View {
+        Button(action: onAccept) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Accept")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(acceptButtonBackground)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var acceptButtonBackground: some View {
+        RoundedRectangle(cornerRadius: 28)
+            .fill(Color(hex: "e8b717"))
+    }
+}
+
+// MARK: - Status Indicator Component
+struct StatusIndicatorView: View {
+    let requestStatus: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            statusIcon
+            statusText
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+    
+    private var statusIcon: some View {
+        Image(systemName: requestStatus == "approved" ? "checkmark.circle.fill" : "xmark.circle.fill")
+            .foregroundColor(requestStatus == "approved" ? .green : .red)
+            .font(.system(size: 16))
+    }
+    
+    private var statusText: some View {
+        Text(requestStatus == "approved" ? "Invitation Accepted" : "Invitation Declined")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(requestStatus == "approved" ? .green : .red)
+    }
+}
+
+// MARK: - Venue Details Component
+struct VenueDetailsView: View {
+    let venueTime: String?
+    let venuePrice: String?
+    
+    var body: some View {
+        if let time = venueTime, !time.isEmpty,
+           let price = venuePrice, !price.isEmpty {
+            HStack {
+                timeSection(time)
+                Spacer()
+                priceSection(price)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(8)
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    private func timeSection(_ time: String) -> some View {
+        HStack {
+            Image(systemName: "clock")
+                .foregroundColor(.gray)
+                .font(.caption)
+            Text(time)
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+        }
+    }
+    
+    private func priceSection(_ price: String) -> some View {
+        HStack {
+            Image(systemName: "dollarsign.circle")
+                .foregroundColor(.gray)
+                .font(.caption)
+            Text(price)
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+        }
+    }
+}
+
+// MARK: - Main Video Preview Component
+struct YouTubeShortsPreviewCard: View {
+    let youtubeURL: String
+    let thumbnailURL: String?
+    let videoTitle: String
+    let onTap: () -> Void
+    
+    private let cropWidth: CGFloat = 200
+    private let cropHeight: CGFloat = 350
+    
+    var body: some View {
+        Button(action: onTap) {
+            ZStack {
+                YouTubeThumbnailView(
+                    thumbnailURL: thumbnailURL,
+                    cropWidth: cropWidth,
+                    cropHeight: cropHeight
+                )
+                
+                VideoOverlayView(videoTitle: videoTitle)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+        .frame(width: cropWidth, height: cropHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Main YouTube Shorts Invite View
+extension MessageView {
+    
+    @ViewBuilder
+      func simpleYouTubeShortsInviteView(_ message: Message) -> some View {
+          SimpleYouTubeShortsInviteView(
+              message: message,
+              requestStatus: $requestStatus,
+              onAccept: { handleAcceptAction(for: message) },
+              onReject: { handleRejectAction(for: message) }
+          )
+          .padding(.horizontal, 16)
+          .padding(.vertical, 8)
+      }
+    
+    @ViewBuilder
+    func youTubeShortsInviteView(_ message: Message) -> some View {
+        VStack(spacing: 12) {
+            InviteHeaderView(message: message)
+            
+            YouTubeShortsContentView(
+                message: message,
+                requestStatus: $requestStatus,
+                onAccept: { handleAcceptAction(for: message) },
+                onReject: { handleRejectAction(for: message) }
+            )
+            
+            if !message.text.isEmpty {
+                MessageTextSection(text: message.text)
+            }
+            
+            VenueDetailsView(
+                venueTime: message.venueTime,
+                venuePrice: message.venuePrice
+            )
+            
+            if requestStatus == "approved" || requestStatus == "rejected" {
+                StatusIndicatorView(requestStatus: requestStatus)
+            }
+        }
+        .background(inviteBackground)
+        .opacity(requestStatus == "approved" || requestStatus == "rejected" ? 0.8 : 1.0)
+        .animation(.easeInOut(duration: 0.3), value: requestStatus)
+        .padding(.trailing, 20)
+    }
+    
+    private var inviteBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color(hex: "1a1a1a"))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(borderColor, lineWidth: 1.5)
+            )
+    }
+    
+    private var borderColor: Color {
+        switch requestStatus {
+        case "approved":
+            return Color.green.opacity(0.5)
+        case "rejected":
+            return Color.red.opacity(0.5)
+        default:
+            return Color(hex: "e8b717").opacity(0.4)
+        }
+    }
+    
+    private func handleAcceptAction(for message: Message) {
+        if let attendanceGroupId = message.attendanceGroupId,
+           let receiverId = message.receiverId {
+            NotificationCenter.default.post(
+                name: .updatePlanStatus,
+                object: nil,
+                userInfo: [
+                    "planId": attendanceGroupId,
+                    "receiverId": receiverId,
+                    "status": "confirmed"
+                ]
+            )
+        }
+        
+        if let groupId = message.attachments.first?.groupId,
+           let receiverId = message.receiverId,
+           message.isGroupInvite {
+            APIService.shared.acceptGroupInvite(groupId: groupId, userId: receiverId) { result in
+                switch result {
+                case .success(let response):
+                    print("✅ Video invite accepted: \(response.message)")
+                case .failure(let error):
+                    print("❌ Failed to accept video invite: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            requestStatus = "approved"
+        }
+        tapActionClosure?(message, "approved")
+        
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func handleRejectAction(for message: Message) {
+        if let attendanceGroupId = message.attendanceGroupId,
+           let receiverId = message.receiverId {
+            NotificationCenter.default.post(
+                name: .updatePlanStatus,
+                object: nil,
+                userInfo: [
+                    "planId": attendanceGroupId,
+                    "receiverId": receiverId,
+                    "status": "cancelled"
+                ]
+            )
+        }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            requestStatus = "rejected"
+        }
+        tapActionClosure?(message, "rejected")
+        
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    
+    struct SimpleYouTubeShortsInviteView: View {
+        let message: Message
+        @Binding var requestStatus: String
+        let onAccept: () -> Void
+        let onReject: () -> Void
+        
+        @State private var showFullScreen = false
+        @State private var videoTitle: String = ""
+        @State private var videoID: String = ""
+        
+        private let cardWidth: CGFloat = 180
+        private let cardHeight: CGFloat = 280
+        
+        var body: some View {
+            VStack(spacing: 16) {
+                // Header
+                simpleHeader
+                
+                // Video Card
+                simpleVideoCard
+                
+                // Message Text
+                if !message.text.isEmpty {
+                    Text(message.text)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                }
+                
+                // Action Buttons or Status
+                if requestStatus == "approved" || requestStatus == "rejected" {
+                    statusView
+                } else if shouldShowButtons {
+                    actionButtons
+                }
+            }
+            .padding(16)
+            .background(Color(hex: "1a1a1a"))
+            .cornerRadius(12)
+            .sheet(isPresented: $showFullScreen) {
+                SimpleYouTubePlayerModal(videoID: videoID, videoTitle: videoTitle)
+            }
+            .onAppear {
+                extractVideoInfo()
+            }
+        }
+        
+        // MARK: - Header
+        private var simpleHeader: some View {
+            HStack(spacing: 12) {
+                // Avatar
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Text(String(message.user.name.prefix(1)))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                
+                // User info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(message.user.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Text("sent a video invite")
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                // YouTube icon
+                Image(systemName: "play.rectangle")
+                    .foregroundColor(.red)
+                    .font(.title2)
+            }
+        }
+        
+        // MARK: - Video Card
+        private var simpleVideoCard: some View {
+            Button(action: { showFullScreen = true }) {
+                ZStack {
+                    // Thumbnail
+                    AsyncImage(url: thumbnailURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: cardWidth, height: cardHeight)
+                                .clipped()
+                        case .failure(_), .empty:
+                            placeholderView
+                        @unknown default:
+                            placeholderView
+                        }
+                    }
+                    
+                    // Dark overlay
+                    Color.black.opacity(0.3)
+                    
+                    // Play button
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.white)
+                    
+                    // Video info overlay
+                    VStack {
+                        Spacer()
+                        
+                        if !videoTitle.isEmpty {
+                            Text(videoTitle)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 12)
+                        }
+                    }
+                    
+                    // Shorts badge
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Text("Shorts")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(8)
+                                .padding(.top, 12)
+                                .padding(.trailing, 12)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .frame(width: cardWidth, height: cardHeight)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            )
+        }
+        
+        private var placeholderView: some View {
+            ZStack {
+                Color.gray.opacity(0.3)
+                    .frame(width: cardWidth, height: cardHeight)
+                
+                VStack(spacing: 8) {
+                    Image(systemName: "play.rectangle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.red)
+                    
+                    Text("YouTube\nShorts")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                }
+            }
+        }
+        
+        // MARK: - Action Buttons
+        private var actionButtons: some View {
+            HStack(spacing: 12) {
+                // Decline
+                Button(action: onReject) {
+                    Text("Decline")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                }
+                
+                // Accept
+                Button(action: onAccept) {
+                    Text("Accept")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        
+        // MARK: - Status View
+        private var statusView: some View {
+            HStack(spacing: 8) {
+                Image(systemName: requestStatus == "approved" ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(requestStatus == "approved" ? .green : .red)
+                
+                Text(requestStatus == "approved" ? "Accepted" : "Declined")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(requestStatus == "approved" ? .green : .red)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+        }
+        
+        // MARK: - Computed Properties
+        private var shouldShowButtons: Bool {
+            let isPending = message.requestStatus == "pending" || requestStatus == "pending"
+            let isNotCurrentUser = !message.user.isCurrentUser
+            let isNotProcessed = requestStatus != "approved" && requestStatus != "rejected"
+            
+            return isPending && isNotCurrentUser && isNotProcessed
+        }
+        
+        private var thumbnailURL: URL? {
+            if !videoID.isEmpty {
+                return URL(string: "https://img.youtube.com/vi/\(videoID)/maxresdefault.jpg")
+            }
+            return message.attachments.first?.thumbnail
+        }
+        
+        // MARK: - Helper Methods
+        private func extractVideoInfo() {
+            guard let attachment = message.attachments.first,
+                  let extractedVideoID = extractVideoId(from: attachment.full.absoluteString) else {
+                return
+            }
+            
+            videoID = extractedVideoID
+            
+            if let venueName = message.venueName, !venueName.isEmpty {
+                videoTitle = "Invite to \(venueName)"
+            } else {
+                videoTitle = "Video Invitation"
+            }
+        }
+        
+        private func extractVideoId(from url: String) -> String? {
+            if let range = url.range(of: "shorts/") {
+                let afterShorts = String(url[range.upperBound...])
+                if let queryRange = afterShorts.range(of: "?") {
+                    return String(afterShorts[..<queryRange.lowerBound])
+                }
+                return afterShorts
+            }
+            return nil
+        }
+    }
+
+    // MARK: - Simple YouTube Player Modal
+    struct SimpleYouTubePlayerModal: View {
+        @Environment(\.dismiss) var dismiss
+        let videoID: String
+        let videoTitle: String
+        
+        @State private var isLoading = true
+        
+        var body: some View {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        
+                        Spacer()
+                        
+                        Text(videoTitle)
+                            .foregroundColor(.white)
+                            .font(.headline)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        // Spacer for balance
+                        Color.clear.frame(width: 60)
+                    }
+                    .background(Color.black)
+                    
+                    // Video Player
+                    SimpleYouTubePlayerView(videoID: videoID, isLoading: $isLoading)
+                    
+                    // Loading overlay
+                    if isLoading {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.5)
+                            
+                            Text("Loading video...")
+                                .foregroundColor(.white)
+                                .font(.system(size: 16))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.8))
+                    }
+                }
+            }
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    // MARK: - Simple YouTube Player View
+    struct SimpleYouTubePlayerView: UIViewRepresentable {
+        let videoID: String
+        @Binding var isLoading: Bool
+        
+        func makeUIView(context: Context) -> WKWebView {
+            let configuration = WKWebViewConfiguration()
+            configuration.allowsInlineMediaPlayback = true
+           // configuration.mediaTypesRequiringUserActionForPlayboot = []
+            
+            let webView = WKWebView(frame: .zero, configuration: configuration)
+            webView.scrollView.isScrollEnabled = false
+            webView.backgroundColor = .black
+            webView.navigationDelegate = context.coordinator
+            
+            return webView
+        }
+        
+        func updateUIView(_ webView: WKWebView, context: Context) {
+            let embedURL = "https://www.youtube.com/embed/\(videoID)?autoplay=1&playsinline=1&controls=1&rel=0"
+            
+            if let url = URL(string: embedURL) {
+                let request = URLRequest(url: url)
+                webView.load(request)
+            }
+        }
+        
+        func makeCoordinator() -> Coordinator {
+            Coordinator(self)
+        }
+        
+        class Coordinator: NSObject, WKNavigationDelegate {
+            var parent: SimpleYouTubePlayerView
+            
+            init(_ parent: SimpleYouTubePlayerView) {
+                self.parent = parent
+            }
+            
+            func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+                parent.isLoading = true
+            }
+            
+            func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    self.parent.isLoading = false
+                }
+            }
+            
+            func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+                parent.isLoading = false
+            }
+        }
+    }
+
+}
+
+// MARK: - Message Text Section
+struct MessageTextSection: View {
+    let text: String
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: 14))
+            .foregroundColor(.white.opacity(0.9))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+    }
+}
+
+
+
+extension MessageView {
+    
+    @ViewBuilder
+    func regularJoinView(_ message: Message) -> some View {
+        VStack(spacing: 12) {
+            // Header Section
+            HStack(spacing: 8) {
+                // User Avatar
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Text(String(message.user.name.prefix(1)))
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                    )
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(message.user.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Text("wants to join")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if let venueName = message.venueName, !venueName.isEmpty {
+                        Text(venueName)
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "e8b717"))
+                            .fontWeight(.medium)
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .foregroundColor(Color(hex: "e8b717"))
+                    .font(.title2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            
+            // Content Section with Regular Attachments
+            VStack(spacing: 8) {
+                // Regular Attachments (Images, Documents, etc.)
+                if !message.attachments.isEmpty {
+                    attachmentsView(message)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 16)
+                }
+                
+                // Message text
+                if !message.text.isEmpty {
+                    HStack {
+                        Text(message.text)
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.9))
+                            .multilineTextAlignment(.leading)
+                            .padding(.horizontal, 16)
+                        Spacer()
+                    }
+                }
+                
+                // Venue details
+                if let venueTime = message.venueTime, !venueTime.isEmpty,
+                   let venuePrice = message.venuePrice, !venuePrice.isEmpty {
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                        Text(venueTime)
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "dollarsign.circle")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                        Text(venuePrice)
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                }
+            }
+            
+            // Accept/Reject Buttons for Regular Join
+            regularJoinActionButtons(for: message)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "1a1a1a"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(borderColor, lineWidth: 1.5)
+                )
+        )
+        .opacity(requestStatus == "approved" || requestStatus == "rejected" ? 0.7 : 1.0)
+        .animation(.easeInOut(duration: 0.3), value: requestStatus)
+    }
+    
+    @ViewBuilder
+    private func regularJoinActionButtons(for message: Message) -> some View {
+        let isApprovedOrRejected = requestStatus == "approved" || requestStatus == "rejected"
+        let isPending = message.requestStatus == "pending" || requestStatus == "pending"
+        
+        if isPending && !message.user.isCurrentUser && !isApprovedOrRejected {
+            // Active buttons for pending requests
+            HStack(spacing: 12) {
+                // Reject Button
+                Button(action: {
+                    handleRejectAction(for: message)
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 14, weight: .medium))
+                        Text("Decline")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color.red.opacity(0.2))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.red.opacity(0.5), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Accept Button
+                Button(action: {
+                    handleAcceptAction(for: message)
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14, weight: .medium))
+                        Text("Accept")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color(hex: "e8b717"))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        } else if isApprovedOrRejected {
+            // Status indicator for completed requests
+            HStack(spacing: 8) {
+                Image(systemName: requestStatus == "approved" ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(requestStatus == "approved" ? .green : .red)
+                    .font(.system(size: 16))
+                
+                Text(requestStatus == "approved" ? "Request Accepted" : "Request Declined")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(requestStatus == "approved" ? .green : .red)
+                
+                Spacer()
+                
+                Text(message.time)
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+            .padding(.vertical, 8)
+        } else if message.user.isCurrentUser {
+            // Status for sender
+            HStack {
+                Image(systemName: "clock")
+                    .foregroundColor(.gray)
+                    .font(.caption)
+                
+                Text("Join request sent")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                
+                Spacer()
+                
+                Text(message.time)
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+}
+
+private func hasYouTubeShortsURL(_ message: Message) -> Bool {
+       // Check in attachments
+       if message.attachments.contains(where: { attachment in
+           attachment.full.absoluteString.contains("youtube.com/shorts/") ||
+           attachment.full.absoluteString.contains("youtu.be/") // Also check for short URLs
+       }) {
+           return true
+       }
+       
+       // Check in message text as backup
+       if message.text.contains("youtube.com/shorts/") || message.text.contains("youtu.be/") {
+           return true
+       }
+       
+       return false
+   }
+   

@@ -200,6 +200,7 @@ private extension InputViewModel {
                         return nil
                     }
                     return Attachment(id: UUID().uuidString, thumbnail: thumbnailURL, full: fullURL, type: .video)
+               
                 }
             }
             .compactMap {
