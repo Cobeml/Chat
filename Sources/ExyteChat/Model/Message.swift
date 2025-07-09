@@ -65,6 +65,7 @@ public struct Message: Identifiable, Hashable {
     public let venueTime : String?
     public let venuePrice : String?
     public let AIdescription : String?
+    public let videoUrl : String?
     
 
 
@@ -85,7 +86,8 @@ public struct Message: Identifiable, Hashable {
                 venueName : String? = nil,
                 venueTime : String? = nil,
                 venuePrice : String? = nil,
-                AIdescription : String? = nil
+                AIdescription : String? = nil,
+                videoUrl : String? = nil
     
     ) {
         self.id = id
@@ -107,6 +109,7 @@ public struct Message: Identifiable, Hashable {
         self.venueTime = venueTime
         self.venuePrice = venuePrice
         self.AIdescription = AIdescription
+        self.videoUrl = videoUrl
     }
 
     public static func makeMessage(
@@ -135,12 +138,14 @@ public struct Message: Identifiable, Hashable {
             var venueTime: String? = nil
             var venuePrice: String? = nil
             var AIdescription: String? = nil
+            var videoUrl: String? = nil
 
             if let reeldata = draft.reelData{
                 venueName = reeldata.venueName
                 venueTime = reeldata.venueTime
                 venuePrice = reeldata.venuePrice
                 AIdescription = reeldata.aiDescription
+                videoUrl = reeldata.videoURL
             }
             
             let messageType = CustomMessageType(from: draft.type)
@@ -148,7 +153,8 @@ public struct Message: Identifiable, Hashable {
                            venueName: venueName,
                            venueTime: venueTime,
                            venuePrice: venuePrice,
-                           AIdescription: AIdescription
+                           AIdescription: AIdescription,
+                           videoUrl: videoUrl
             )
         }
 }

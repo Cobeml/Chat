@@ -38,6 +38,7 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
     public var aiDescription: String? // Fixed naming convention
     public var thumbURL: String?
     public var videoType: VideoType = .normal
+    public var venueId: String?
     
     // Optional: Add sender details as mentioned in comments
     public var senderID: String?
@@ -53,7 +54,8 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
         thumbURL: String? = nil,
         videoType: VideoType = .normal, // Added default value
         senderID: String? = nil,
-        senderName: String? = nil
+        senderName: String? = nil,
+        venueId: String? = nil,
     ) {
         self.id = id
         self.venueName = venueName
@@ -65,5 +67,6 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
         self.videoType = videoType
         self.senderID = senderID
         self.senderName = senderName
+        self.venueId = venueId
     }
 }

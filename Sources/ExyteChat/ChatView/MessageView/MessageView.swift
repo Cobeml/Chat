@@ -8,10 +8,83 @@
 import SwiftUI
 import AVKit
 
+
+struct YouTubeUtility {
+    static func extractVideoId(from urlString: String) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+        
+        let host = url.host?.lowercased()
+        
+        if host == "youtu.be" {
+            // Format: https://youtu.be/VIDEO_ID
+            return String(url.path.dropFirst()) // Remove leading "/"
+        } else if host == "www.youtube.com" || host == "youtube.com" || host == "m.youtube.com" {
+            // Handle different YouTube URL formats
+            
+            if url.path.contains("/watch") {
+                // Format: https://www.youtube.com/watch?v=VIDEO_ID
+                return URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?
+                    .first(where: { $0.name == "v" })?
+                    .value
+            } else if url.path.contains("/embed/") {
+                // Format: https://www.youtube.com/embed/VIDEO_ID
+                let pathComponents = url.path.components(separatedBy: "/")
+                if let embedIndex = pathComponents.firstIndex(of: "embed"),
+                   embedIndex + 1 < pathComponents.count {
+                    return pathComponents[embedIndex + 1]
+                }
+            } else if url.path.contains("/v/") {
+                // Format: https://www.youtube.com/v/VIDEO_ID
+                let pathComponents = url.path.components(separatedBy: "/")
+                if let vIndex = pathComponents.firstIndex(of: "v"),
+                   vIndex + 1 < pathComponents.count {
+                    return pathComponents[vIndex + 1]
+                }
+            } else if url.path.contains("/shorts/") {
+                // Format: https://www.youtube.com/shorts/VIDEO_ID
+                // Format: https://youtube.com/shorts/VIDEO_ID
+                // Format: https://m.youtube.com/shorts/VIDEO_ID
+                let pathComponents = url.path.components(separatedBy: "/")
+                if let shortsIndex = pathComponents.firstIndex(of: "shorts"),
+                   shortsIndex + 1 < pathComponents.count {
+                    let videoId = pathComponents[shortsIndex + 1]
+                    // Remove any query parameters that might be attached
+                    return videoId.components(separatedBy: "?").first
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    static func getThumbnailURL(for videoId: String) -> URL? {
+        let baseURL = "https://img.youtube.com/vi/\(videoId)/sddefault.jpg"
+        return URL(string: baseURL)
+    }
+    
+    static func isYouTubeURL(_ urlString: String) -> Bool {
+        guard let url = URL(string: urlString) else { return false }
+        let host = url.host?.lowercased()
+        
+        return host == "youtu.be" ||
+               host == "www.youtube.com" ||
+               host == "youtube.com" ||
+               host == "m.youtube.com"
+    }
+    
+    // Helper function to detect if URL is specifically a YouTube Short
+    static func isYouTubeShort(_ urlString: String) -> Bool {
+        guard let url = URL(string: urlString) else { return false }
+        return url.path.contains("/shorts/")
+    }
+}
+
+
 public enum CustomMessageType : String, Decodable {
     case invite = "invite"
     case friendInvite = "friendinvite"
-    case planInvite = "planinvite"
+    case planInvite = "planInvite"
     case join = "join"
     case like = "like"
     case friend = "friend"
@@ -708,11 +781,10 @@ struct MessageView: View {
             HStack(spacing: 10) {
                 Button{}
                 label : {
-                    Circle()
-                    // have to add the image here
-                        .stroke(Color.white, lineWidth: 2)
-                        .frame(width: 80, height: 80)
-                        .background(Circle().fill(Color.gray.opacity(0.5)))
+                    
+                    UserAvatarView(avatarURL: message.user.avatarURL, name: message.user.name, size: 40)
+                    
+                    
                     
                     VStack(alignment: .center, spacing: 2) {
                         HStack(alignment: .center) {
@@ -751,9 +823,10 @@ struct MessageView: View {
         
         @State var isThumbnailLoaded: Bool = false
 
-        let receiverName: String = "Daniel"
+        var receiverName: String = "Daniel"
         let receiverAge: String = "103"
-
+        let avatarURL : URL?
+      
         let cropWidth: CGFloat = 170
         let cropHeight: CGFloat = 250
 
@@ -763,18 +836,38 @@ struct MessageView: View {
             self.time = message.venueTime ?? ""
             self.price = message.venuePrice ?? ""
             self.description = message.AIdescription ?? ""
+            self.receiverName = message.user.name
+            self.avatarURL = message.user.avatarURL
+           
             if let firstAttachment = message.attachments.first {
                 self._player = State(initialValue: AVPlayer(url: firstAttachment.full))
             } else {
                 self._player = State(initialValue: AVPlayer())  // Fallback to empty player
             }
         }
+        
+        private func getThumbnailURL(for message: Message) -> URL? {
+             if let firstAttachment = message.attachments.first {
+                 let videoURLString = firstAttachment.full.absoluteString
+                 
+                 if YouTubeUtility.isYouTubeURL(videoURLString) {
+                     if let videoId = YouTubeUtility.extractVideoId(from: videoURLString) {
+                         return YouTubeUtility.getThumbnailURL(for: videoId)
+                     }
+                 } else {
+                     return firstAttachment.full
+                 }
+             }
+             
+             return message.attachments.first?.thumbnail
+         }
+         
                 
         var body: some View {
                 VStack(alignment: .center){
                     Button(action: { showReelInvite = true }) {
                         ZStack {
-                            ReelThumbnailDisplay(url: message.attachments.first?.thumbnail, crop_width: cropWidth, crop_height: cropHeight, isThumbnailLoaded : $isThumbnailLoaded)
+                            ReelThumbnailDisplay(message:  message, crop_width: cropWidth, crop_height: cropHeight, isThumbnailLoaded : $isThumbnailLoaded)
 
                             if isThumbnailLoaded{
                                 Image(systemName: "play.circle")
@@ -791,7 +884,7 @@ struct MessageView: View {
                                     
                                     VStack{
                                         Location_Price_Time_Display_Receiver(location: location, price: price, time: time)
-                                        InviterInfoDisplay(DpRadius: 40, name: receiverName, Age: receiverAge, Description: description)
+                                        InviterInfoDisplay(DpRadius: 40, message: message, Description: description)
                                             .padding(.top, 7)
                                     }
                                         .padding(.top, 125)
@@ -836,9 +929,11 @@ struct MessageView: View {
             .clipShape(RoundedRectangle(cornerRadius: 5))
         }
         
-        private func ReelThumbnailDisplay(url: URL?, crop_width: CGFloat, crop_height: CGFloat, isThumbnailLoaded: Binding<Bool>) -> some View {
+        private func ReelThumbnailDisplay(message: Message, crop_width: CGFloat, crop_height: CGFloat, isThumbnailLoaded: Binding<Bool>) -> some View {
             Group {
-                if let validURL = url {
+                let thumbnailURL = determineThumbnailURL(for: message)
+                
+                if let validURL = thumbnailURL {
                     AsyncImageView(url: validURL)
                         .frame(width: crop_width, height: crop_height)
                         .clipShape(RoundedRectangle(cornerRadius: 5))
@@ -871,7 +966,7 @@ struct MessageView: View {
                                 )
                             )
                             .frame(width: crop_width, height: crop_height)
-
+                        
                         VStack {
                             Image(systemName: "video.slash") // Video error icon
                                 .resizable()
@@ -883,26 +978,44 @@ struct MessageView: View {
                                 .font(.caption)
                                 .foregroundColor(.white)
                         }
-                    }                    .onAppear {
+                    }
+                    .onAppear {
                         isThumbnailLoaded.wrappedValue = false
                     }
                 }
             }
         }
         
-        private func InviterInfoDisplay(DpRadius : CGFloat, name : String, Age : String, Description : String) -> some View {
+        private func determineThumbnailURL(for message: Message) -> URL? {
+               // First, check if there's a video URL in the message attachments
+               if let firstAttachment = message.attachments.first {
+                   let videoURLString = firstAttachment.full.absoluteString
+                   
+                   // Check if it's a YouTube URL
+                   if YouTubeUtility.isYouTubeURL(videoURLString) {
+                       // Extract video ID and create YouTube thumbnail URL
+                       if let videoId = YouTubeUtility.extractVideoId(from: videoURLString) {
+                           return YouTubeUtility.getThumbnailURL(for: videoId)
+                       }
+                   } else {
+                       // For non-YouTube videos, use the original video URL as thumbnail
+                       // This might work for some video services that serve thumbnails directly
+                       return firstAttachment.full
+                   }
+               }
+               
+               // Fallback: use the thumbnail URL from attachments if available
+               return message.attachments.first?.thumbnail
+           }
+        
+        private func InviterInfoDisplay(DpRadius : CGFloat, message: Message, Description : String) -> some View {
             Button {} label: {
-                Circle()
-                    .stroke(Color.white, lineWidth: 1.5)
-                    .frame(width: DpRadius, height: DpRadius)
-                    .background(Circle().fill(Color.gray.opacity(0.5)))
-                    .padding(.leading, 8)
-//                    .padding(.trailing, 10)
+                UserAvatarView(avatarURL: message.user.avatarURL, name: message.user.name, size: 40)
             
             
                 VStack(alignment: .center, spacing: 2) {
                     HStack {
-                        Text(name)
+                        Text(message.user.name)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                         
@@ -911,7 +1024,7 @@ struct MessageView: View {
                             .foregroundColor(.white)
                             .padding(.leading, -5)
                         
-                        Text(Age)
+                        Text("")
                             .font(.system(size: 9))
                             .foregroundColor(.white)
                             .padding(.leading, -5)
@@ -1844,7 +1957,7 @@ struct InviteHeaderView: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            UserAvatarView(userName: message.user.name)
+            UserAvatarView(avatarURL: message.user.avatarURL, name: message.user.name, size: 40)
             
             InviteTextView(message: message)
             
@@ -1859,20 +1972,100 @@ struct InviteHeaderView: View {
 
 // MARK: - User Avatar Component
 struct UserAvatarView: View {
-    let userName: String
+    let avatarURL: URL?
+    let name: String
+    let size: CGFloat
+    let strokeWidth: CGFloat
+    let strokeColor: Color
+    
+    init(
+        avatarURL: URL?,
+        name: String,
+        size: CGFloat = 80,
+        strokeWidth: CGFloat = 2,
+        strokeColor: Color = .white
+    ) {
+        self.avatarURL = avatarURL
+        self.name = name
+        self.size = size
+        self.strokeWidth = strokeWidth
+        self.strokeColor = strokeColor
+    }
     
     var body: some View {
-        Circle()
-            .fill(Color.gray.opacity(0.3))
-            .frame(width: 40, height: 40)
-            .overlay(
-                Text(String(userName.prefix(1)))
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-            )
+        ZStack {
+            Circle()
+                .fill(Color.gray.opacity(0.5))
+                .frame(width: size, height: size)
+            
+            // Profile Image or Initials
+            if let avatarURL = avatarURL {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: size - strokeWidth * 2, height: size - strokeWidth * 2)
+                            .clipShape(Circle())
+                    case .failure(_):
+                        InitialsView(name: name, size: size - strokeWidth * 2)
+                    case .empty:
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: size - strokeWidth * 2, height: size - strokeWidth * 2)
+                    @unknown default:
+                        InitialsView(name: name, size: size - strokeWidth * 2)
+                    }
+                }
+            } else {
+                InitialsView(name: name, size: size - strokeWidth * 2)
+            }
+        }
+        .overlay(
+            Circle()
+                .stroke(strokeColor, lineWidth: strokeWidth)
+                .frame(width: size, height: size)
+        )
     }
 }
+
+struct InitialsView: View {
+    let name: String
+    let size: CGFloat
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.blue.opacity(0.7),
+                        Color.purple.opacity(0.7)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: size, height: size)
+            
+            Text(initials)
+                .font(.system(size: size * 0.3, weight: .bold))
+                .foregroundColor(.white)
+        }
+    }
+    
+    private var initials: String {
+        let words = name.split(separator: " ")
+        if words.count >= 2 {
+            let firstInitial = String(words[0].prefix(1))
+            let lastInitial = String(words[1].prefix(1))
+            return "\(firstInitial)\(lastInitial)".uppercased()
+        } else if let firstWord = words.first {
+            return String(firstWord.prefix(1)).uppercased()
+        }
+        return "U"
+    }
+}
+
 
 // MARK: - Invite Text Component
 struct InviteTextView: View {
@@ -2968,6 +3161,7 @@ extension MessageView {
 
 private func hasYouTubeShortsURL(_ message: Message) -> Bool {
        // Check in attachments
+    
        if message.attachments.contains(where: { attachment in
            attachment.full.absoluteString.contains("youtube.com/shorts/") ||
            attachment.full.absoluteString.contains("youtu.be/") // Also check for short URLs
@@ -2983,3 +3177,5 @@ private func hasYouTubeShortsURL(_ message: Message) -> Bool {
        return false
    }
    
+
+
