@@ -57,7 +57,7 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
         senderID: String? = nil,
         senderName: String? = nil,
         venueId: String? = nil,
-        category: String? = nil,
+        category: String? = nil
     ) {
         self.id = id
         self.venueName = venueName
