@@ -19,6 +19,7 @@ public struct DraftMessage {
     public let isGroupInvite: Bool
     public let attendanceGroupId: String?
     public let reelData : ReelModel?
+    public let category : String?
 
     public init(id: String? = nil, 
                 text: String,
@@ -32,7 +33,8 @@ public struct DraftMessage {
                 reelData : ReelModel? = nil,
                 receiverId: String? = nil,
                 isGroupInvite: Bool = false,
-                attendanceGroupId: String? = nil) {
+                attendanceGroupId: String? = nil,
+                category: String? = nil) {
         self.id = id
         self.text = text
         self.medias = medias
@@ -46,5 +48,6 @@ public struct DraftMessage {
         self.receiverId = receiverId
         self.isGroupInvite = isGroupInvite
         self.attendanceGroupId = attendanceGroupId
+        self.category = category
     }
 }

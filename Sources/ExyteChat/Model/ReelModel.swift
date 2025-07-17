@@ -43,6 +43,7 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
     // Optional: Add sender details as mentioned in comments
     public var senderID: String?
     public var senderName: String?
+    public var category: String?
 
     public init(
         id: UUID = UUID(),
@@ -56,6 +57,7 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
         senderID: String? = nil,
         senderName: String? = nil,
         venueId: String? = nil,
+        category: String? = nil,
     ) {
         self.id = id
         self.venueName = venueName
@@ -68,5 +70,6 @@ public struct ReelModel: Codable, Equatable, Identifiable, Hashable {
         self.senderID = senderID
         self.senderName = senderName
         self.venueId = venueId
+        self.category = category
     }
 }
