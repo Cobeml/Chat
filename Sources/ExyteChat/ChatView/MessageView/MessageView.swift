@@ -84,7 +84,7 @@ struct YouTubeUtility {
 public enum CustomMessageType : String, Decodable {
     case invite = "invite"
     case friendInvite = "friendinvite"
-    case planInvite = "planInvite"
+    case planInvite = "planinvite"
     case join = "join"
     case like = "like"
     case friend = "friend"
