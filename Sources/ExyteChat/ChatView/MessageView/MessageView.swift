@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVKit
+import WebKit
 
 
 struct YouTubeUtility {
@@ -59,7 +60,8 @@ struct YouTubeUtility {
     }
     
     static func getThumbnailURL(for videoId: String) -> URL? {
-        let baseURL = "https://img.youtube.com/vi/\(videoId)/sddefault.jpg"
+        // Try high quality thumbnail first, fallback to medium quality
+        let baseURL = "https://img.youtube.com/vi/\(videoId)/maxresdefault.jpg"
         return URL(string: baseURL)
     }
     
@@ -77,6 +79,67 @@ struct YouTubeUtility {
     static func isYouTubeShort(_ urlString: String) -> Bool {
         guard let url = URL(string: urlString) else { return false }
         return url.path.contains("/shorts/")
+    }
+}
+
+// YouTube Player Web View Component
+import WebKit
+
+struct YouTubePlayerWebView: UIViewRepresentable {
+    let videoID: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences = preferences
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.scrollView.isScrollEnabled = false
+        webView.backgroundColor = .black
+        webView.isOpaque = false
+        
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let embedHTML = """
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+                body, html {
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
+                    background-color: black;
+                }
+                iframe {
+                    position: absolute;
+                    top: -50px;
+                    left: 0;
+                    width: 100%;
+                    height: calc(100% + 100px);
+                    border: none;
+                    transform: scale(1.1);
+                }
+            </style>
+        </head>
+        <body>
+            <iframe 
+                src="https://www.youtube.com/embed/\(videoID)?autoplay=1&playsinline=1&controls=0&showinfo=0&rel=0&modestbranding=1&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&start=0"
+                frameborder="0"
+                allow="autoplay; encrypted-media"
+                allowfullscreen>
+            </iframe>
+        </body>
+        </html>
+        """
+        
+        webView.loadHTMLString(embedHTML, baseURL: URL(string: "https://www.youtube.com"))
     }
 }
 
@@ -230,6 +293,7 @@ struct MessageView: View {
 
 //                    let _ = debugPrint("🔴🔴🔴 \(message)")
                     PlanInviteView(message : message)
+                        .padding(.bottom, 20)
                     
                 }
                 .padding(.top, topPadding + 0.5)
@@ -628,70 +692,211 @@ struct MessageView: View {
         // receiver details
         let receiverName : String
         let receiverAge : String
-//        let receiverImage
+        
+        // Get YouTube video ID if this is a YouTube URL
+        private var youtubeVideoID: String? {
+            guard let firstAttachment = message.attachments.first else { return nil }
+            let videoURLString = firstAttachment.full.absoluteString
+            
+            if YouTubeUtility.isYouTubeURL(videoURLString) {
+                return YouTubeUtility.extractVideoId(from: videoURLString)
+            }
+            return nil
+        }
+        
+        private var isYouTubeVideo: Bool {
+            youtubeVideoID != nil
+        }
 
         var body: some View {
-//            let _ = debugPrint("🌟 Reel Invite: \(venue) \(time) \(price) \(player.currentItem)")
-            Group{
-                if player.currentItem != nil{
-                    ZStack {
+            GeometryReader { geo in
+                ZStack {
+                    // Full screen video background
+                    if isYouTubeVideo, let videoID = youtubeVideoID {
+                        YouTubePlayerWebView(videoID: videoID)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                            .edgesIgnoringSafeArea(.all)
+                    } else if player.currentItem != nil {
                         VideoplayerView(player: player)
-                            .onTapGesture {
-                                showControls = true
-                                hideControlsAfterDelay()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                            .edgesIgnoringSafeArea(.all)
+                    } else {
+                        // Black background fallback
+                        Color.black
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .edgesIgnoringSafeArea(.all)
+                    }
+                    
+                    // Modern overlay structure
+                    VStack(spacing: 0) {
+                        // Top section with back button
+                        HStack {
+                            Button(action: { dismiss() }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                             }
-                        
-                        BackButton()
-                            .padding(.top, -400)
-                            .padding(.leading, -200)
-                        
-                        ZStack{
-                            ReelLinearGradient()
-                                .allowsHitTesting(false)
+                            .padding(.top, 15)
+                            .padding(.leading, 16)
                             
-                            VStack{
-                                Spacer()
-                                    Location_Time_Price_View_Receiver(venue: venue, price: price, time: time)
-                                    UserInfoView(name: receiverName, age: receiverAge, description: description, message: message)
-                                        .padding()
-
-                            }
-                            .padding(.bottom, 70)
+                            Spacer()
                         }
                         
-                        if showControls {
-                            Button(action: {
-                                if isPlaying {
-                                    player.pause()
-                                } else {
-                                    player.play()
+                        Spacer()
+                        
+                        // Bottom content overlay
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Gradient overlay for text readability
+                            LinearGradient(
+                                gradient: Gradient(stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: Color.black.opacity(0.3), location: 0.5),
+                                    .init(color: Color.black.opacity(0.8), location: 1.0)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 280)
+                            .overlay(
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Spacer()
+                                    
+                                    // Main content
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        
+                                        // Plan invite tag
+                                        HStack {
+                                            Text("PLAN INVITE")
+                                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                                .tracking(0.8)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 5)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(Color.black.opacity(0.7))
+                                                        .overlay(
+                                                            Capsule()
+                                                                .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                                                        )
+                                                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+                                                )
+                                            
+                                            Spacer()
+                                        }
+                                        
+                                        // Profile section
+                                        HStack(spacing: 12) {
+                                            // Avatar placeholder or actual avatar
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        gradient: Gradient(colors: [
+                                                            Color.blue.opacity(0.7),
+                                                            Color.purple.opacity(0.7)
+                                                        ]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                                .overlay(
+                                                    Text(String(receiverName.prefix(1)))
+                                                        .font(.system(size: 16, weight: .bold))
+                                                        .shadow(color: .black.opacity(0.8), radius: 3, x: 0, y: 2)
+                                                        .foregroundColor(.white)
+                                                )
+                                                .shadow(color: .black.opacity(0.2), radius: 4)
+                                            
+                                            Text(receiverName)
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.8), radius: 3, x: 0, y: 2)
+                                        }
+                                        
+                                        // Message text from user
+                                        if !message.text.isEmpty {
+                                            Text(message.text)
+                                                .font(.subheadline)
+                                                .foregroundColor(.white.opacity(0.9))
+                                                .multilineTextAlignment(.leading)
+                                                .lineLimit(nil)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                                .shadow(color: .black.opacity(0.8), radius: 3, x: 0, y: 2)
+                                        }
+                                        
+                                        // Location and time details
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            if !venue.isEmpty {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    Image(systemName: "location.fill")
+                                                        .foregroundColor(.white.opacity(0.8))
+                                                        .font(.system(size: 14))
+                                                        .padding(.top, 2)
+                                                    
+                                                    Text(venue)
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.white.opacity(0.9))
+                                                        .fixedSize(horizontal: false, vertical: true)
+                                                        .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                                                    
+                                                    Spacer()
+                                                }
+                                            }
+                                            
+                                            if !time.isEmpty {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    Image(systemName: "calendar")
+                                                        .foregroundColor(.white.opacity(0.8))
+                                                        .font(.system(size: 14))
+                                                        .padding(.top, 2)
+                                                    
+                                                    Text(time)
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.white.opacity(0.9))
+                                                        .fixedSize(horizontal: false, vertical: true)
+                                                        .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                                                    
+                                                    Spacer()
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 40)
                                 }
-                                isPlaying.toggle()
-                                showControls = true  // Show controls again on interaction
-                                hideControlsAfterDelay()
-                            })
-                            {
-                                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                                    .resizable()
-                                    .frame(width: 50, height: 50)
-                                    .foregroundColor(.white)
-                                    .shadow(radius: 5)
-                            }
-                            .padding()
+                            )
                         }
                     }
                 }
-                else {
-                    LoadingView(width: 300, height: 300)
-                }
             }
             .onAppear {
+                print("🎬 ReelInvite appeared")
+                print("   - Is YouTube video: \(isYouTubeVideo)")
+                print("   - YouTube video ID: \(youtubeVideoID ?? "N/A")")
+                print("   - Player item: \(player.currentItem != nil ? "exists" : "nil")")
+                
+                if !isYouTubeVideo && player.currentItem != nil {
                     player.seek(to: .zero)
                     player.play()
                     isPlaying = true
+                } else if isYouTubeVideo {
+                    print("✅ YouTube video will be handled by web player")
+                } else {
+                    print("⚠️ ReelInvite: No video content available")
+                }
            }
             .onDisappear {
-                player.pause() // Stops playback
+                if !isYouTubeVideo {
+                    player.pause() // Only pause AVPlayer for non-YouTube videos
+                }
             }
         }
 
@@ -699,6 +904,24 @@ struct MessageView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     showControls = false
             }
+        }
+        
+        private func determineActivityTitle() -> String {
+            if !venue.isEmpty {
+                let venueLower = venue.lowercased()
+                if venueLower.contains("coffee") || venueLower.contains("café") {
+                    return "Coffee Chat"
+                } else if venueLower.contains("restaurant") || venueLower.contains("dinner") {
+                    return "Dinner"
+                } else if venueLower.contains("bar") || venueLower.contains("drinks") {
+                    return "Drinks"
+                } else if venueLower.contains("park") || venueLower.contains("walk") {
+                    return "Walk"
+                } else {
+                    return "Hangout"
+                }
+            }
+            return "Meet Up"
         }
         
         private func ReelLinearGradient() -> some View {
@@ -814,22 +1037,24 @@ struct MessageView: View {
         @State var thumbnail: UIImage? = nil
         @State var player: AVPlayer
         @State var showReelInvite = false
-
+        
         let message: Message
         let location: String
         let time: String
         let price: String
         let description: String
         
+        
         @State var isThumbnailLoaded: Bool = false
-
+        @State private var requestStatus: String = ""
+        
         var receiverName: String = "Daniel"
         let receiverAge: String = "103"
-        let avatarURL : URL?
-      
-        let cropWidth: CGFloat = 170
-        let cropHeight: CGFloat = 250
-
+        let avatarURL: URL?
+        
+        private let cardWidth: CGFloat = 180
+        private let cardHeight: CGFloat = 280
+        
         init(message: Message) {
             self.message = message
             self.location = message.venueName ?? ""
@@ -838,249 +1063,520 @@ struct MessageView: View {
             self.description = message.AIdescription ?? ""
             self.receiverName = message.user.name
             self.avatarURL = message.user.avatarURL
-           
+            
             if let firstAttachment = message.attachments.first {
                 self._player = State(initialValue: AVPlayer(url: firstAttachment.full))
             } else {
-                self._player = State(initialValue: AVPlayer())  // Fallback to empty player
+                self._player = State(initialValue: AVPlayer())
             }
         }
         
-        private func getThumbnailURL(for message: Message) -> URL? {
-             if let firstAttachment = message.attachments.first {
-                 let videoURLString = firstAttachment.full.absoluteString
-                 
-                 if YouTubeUtility.isYouTubeURL(videoURLString) {
-                     if let videoId = YouTubeUtility.extractVideoId(from: videoURLString) {
-                         return YouTubeUtility.getThumbnailURL(for: videoId)
-                     }
-                 } else {
-                     return firstAttachment.full
-                 }
-             }
-             
-             return message.attachments.first?.thumbnail
-         }
-         
-                
         var body: some View {
-                VStack(alignment: .center){
-                    Button(action: { showReelInvite = true }) {
-                        ZStack {
-                            ReelThumbnailDisplay(message:  message, crop_width: cropWidth, crop_height: cropHeight, isThumbnailLoaded : $isThumbnailLoaded)
-
-                            if isThumbnailLoaded{
-                                Image(systemName: "play.circle")
-                                    .renderingMode(.template)
-                                    .resizable()
-                                    .foregroundColor(Color.white)
-                                    .frame(width: 18, height: 18)
-                                    .offset(x: 65, y: -105)
-                                    .shadow(color: Color.black, radius: 10, x: 0, y: 0)
-                                
-                    
-                                ZStack {
-                                    ReelLinearGradient()
-                                    
-                                    VStack{
-                                        Location_Price_Time_Display_Receiver(location: location, price: price, time: time)
-                                        InviterInfoDisplay(DpRadius: 40, message: message, Description: description)
-                                            .padding(.top, 7)
-                                    }
-                                        .padding(.top, 125)
-                                }
-                                .frame(width: cropWidth, height: cropHeight)
-                            }
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
+            VStack(spacing: 8) {
+                modernInviteCard
+                    .frame(width: cardWidth, height: cardHeight)
+                    .background(Color.clear)
                     .fullScreenCover(isPresented: $showReelInvite) {
-                        if isThumbnailLoaded{
-                            ReelInvite(player : $player, venue: location, time: time, price: price, description: description, message: message, receiverName: receiverName, receiverAge: receiverAge)
-                        }
+                        ReelInvite(
+                            player: $player,
+                            venue: location,
+                            time: time,
+                            price: price,
+                            description: description,
+                            message: message,
+                            receiverName: receiverName,
+                            receiverAge: receiverAge
+                        )
                     }
-                    
-//                    if isThumbnailLoaded{
-//                        ActionButtons4Reel(width: cropWidth - 20, height: 30, fontsize: 15, message: message)
-//                            .padding(.bottom, 10)
-//                    }
+                
+                // Message text after the entire card - polished and refined
+                if !message.text.isEmpty {
+                    HStack(alignment: .top, spacing: 0) {
+                        Text(message.text)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary.opacity(0.8))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(nil)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        Spacer()
+                    }
+                    .frame(width: cardWidth)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 2)
                 }
-                .frame(width: cropWidth)
-                .background(Color.clear.opacity(0.5))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white, lineWidth: 0.1)
-                )
+            }
+            .onAppear {
+                self.requestStatus = message.requestStatus ?? ""
+                print("🔄 PlanInviteView appeared:")
+                print("   - Message status: \(message.requestStatus ?? "nil")")
+                print("   - Local status: \(requestStatus)")
+                print("   - Should show buttons: \(shouldShowActionButtons)")
+                print("   - Thumbnail loaded: \(isThumbnailLoaded)")
+            }
         }
         
+        private var modernInviteCard: some View {
+            ZStack {
+                // Background Video/Image with enhanced styling
+                videoBackgroundView
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                
+                // Professional gradient overlay
+                modernGradientOverlay
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                
+                // Content overlay with better organization
+                VStack(spacing: 0) {
+                    // Top section - Tag and message
+                    VStack(alignment: .leading, spacing: 0) {
+                        inviteHeaderSection
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    
+                    Spacer()
+                    
+                    // Bottom section - Details and action
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Location and time details at bottom
+                        venueDetailsSection
+                        
+                        // Action button or status
+                        actionSection
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                }
+                
+                // Play button overlay (only show if no action buttons)
+                if isThumbnailLoaded && !shouldShowActionButtons {
+                    playButtonOverlay
+                }
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.white.opacity(0.5),
+                                Color.white.opacity(0.2),
+                                Color.white.opacity(0.05)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: Color.black.opacity(0.25),
+                radius: 16,
+                x: 0,
+                y: 8
+            )
+            .shadow(
+                color: Color.black.opacity(0.1),
+                radius: 4,
+                x: 0,
+                y: 2
+            )
+        }
         
-        private func ReelLinearGradient() -> some View {
+        private var videoBackgroundView: some View {
+            Group {
+                let thumbnailURL = determineThumbnailURL(for: message)
+                
+                
+                if let validURL = thumbnailURL {
+                    AsyncImage(url: validURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: cardWidth, height: cardHeight)
+                                .onAppear {
+                                    print("✅ Image loaded successfully for URL: \(validURL.absoluteString)")
+                                    isThumbnailLoaded = true
+                                }
+                        case .failure(let error):
+                            defaultBackgroundView
+                                .onAppear {
+                                    print("❌ Image failed to load: \(error.localizedDescription)")
+                                    isThumbnailLoaded = false
+                                }
+                        case .empty:
+                            ZStack {
+                                defaultBackgroundView
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            }
+                            .onAppear {
+                                print("⏳ Image loading for URL: \(validURL.absoluteString)")
+                            }
+                        @unknown default:
+                            defaultBackgroundView
+                        }
+                    }
+                } else {
+                    defaultBackgroundView
+                        .onAppear {
+                            print("⚠️ Using default background - no valid thumbnail URL")
+                            isThumbnailLoaded = false
+                        }
+                }
+            }
+        }
+        
+        private var defaultBackgroundView: some View {
             LinearGradient(
                 gradient: Gradient(colors: [
-                    .clear,
-                    .black.opacity(0.3),
-                    .black.opacity(0.75),
-                    .black.opacity(0.95)
+                    Color(hex: "2C1810"),
+                    Color(hex: "8B4513"),
+                    Color(hex: "1a1a1a")
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: cardWidth, height: cardHeight)
+            .overlay(
+                VStack {
+                    Image(systemName: "video.slash")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .foregroundColor(.white.opacity(0.6))
+                    
+                    Text("Video Unavailable")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+            )
+        }
+        
+        private var modernGradientOverlay: some View {
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0.0),
+                    .init(color: .clear, location: 0.45),
+                    .init(color: Color.black.opacity(0.15), location: 0.65),
+                    .init(color: Color.black.opacity(0.5), location: 0.85),
+                    .init(color: Color.black.opacity(0.85), location: 1.0)
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .frame(width: cardWidth, height: cardHeight)
         }
         
-        private func ReelThumbnailDisplay(message: Message, crop_width: CGFloat, crop_height: CGFloat, isThumbnailLoaded: Binding<Bool>) -> some View {
-            Group {
-                let thumbnailURL = determineThumbnailURL(for: message)
-                
-                if let validURL = thumbnailURL {
-                    AsyncImageView(url: validURL)
-                        .frame(width: crop_width, height: crop_height)
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
-                        .overlay(
-                            Rectangle()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.clear, Color.white.opacity(0.5), Color.white.opacity(0.5), Color.clear]),
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 1
+        private var inviteHeaderSection: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                // Compact plan invite tag
+                HStack {
+                    Text("PLAN INVITE")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .tracking(0.8)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.7))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
                                 )
-                                .mask(
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .padding(.bottom, 1)
-                                )
+                                .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
                         )
-                        .onAppear {
-                            isThumbnailLoaded.wrappedValue = true
-                        }
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
+                    
+                    Spacer()
+                }
+            }
+        }
+        
+        private var userInfoSection: some View {
+            HStack(spacing: 10) {
+                // User avatar - enhanced design
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.white, .white.opacity(0.7)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            ))
+                            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                    case .failure(_), .empty:
+                        Circle()
                             .fill(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [Color.gray.opacity(0.25), Color.gray.opacity(0.1), Color.black]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [
+                                        Color.blue.opacity(0.7),
+                                        Color.purple.opacity(0.7)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: crop_width, height: crop_height)
-                        
-                        VStack {
-                            Image(systemName: "video.slash") // Video error icon
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(.white)
-                            
-                            Text("Video Unavailable")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                        }
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Text(String(message.user.name.prefix(1)))
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                            )
+                            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                    @unknown default:
+                        Circle()
+                            .fill(Color.gray)
+                            .frame(width: 32, height: 32)
+                            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                     }
-                    .onAppear {
-                        isThumbnailLoaded.wrappedValue = false
+                }
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(message.user.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.8), radius: 3, x: 0, y: 1)
+                        .lineLimit(1)
+                    
+                    if !receiverAge.isEmpty && receiverAge != "103" {
+                        Text("Age \(receiverAge)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: .black.opacity(0.8), radius: 3, x: 0, y: 1)
+                    }
+                }
+                
+                Spacer()
+            }
+        }
+        
+        private var venueDetailsSection: some View {
+            VStack(spacing: 8) {
+                // Location row - compact bottom design
+                if !location.isEmpty {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 12)
+                        
+                        Text(location)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        
+                        Spacer()
+                    }
+                }
+                
+                // Time row - compact bottom design
+                if !time.isEmpty {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.white)
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 12)
+                        
+                        Text(time)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        
+                        Spacer()
                     }
                 }
             }
+        }
+        
+        private var actionSection: some View {
+            Group {
+                if shouldShowActionButtons {
+                    modernActionButtons
+                } else if requestStatus == "approved" || requestStatus == "rejected" {
+                    statusIndicator
+                }
+            }
+            .zIndex(999) // Ensure action section is on top
+        }
+        
+        private var modernActionButtons: some View {
+            Button(action: {
+                print("🎯 View button tapped successfully!")
+                showReelInvite = true
+            }) {
+                HStack(spacing: 6) {
+                    Text("VIEW DETAILS")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .tracking(0.2)
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.black)
+                }
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .frame(height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(Color.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.white.opacity(0.8),
+                                            Color.white.opacity(0.4)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded { _ in
+                        print("🎯 Simultaneous gesture - ensuring button tap!")
+                        showReelInvite = true
+                    }
+            )
+            .contentShape(Rectangle())
+            .allowsHitTesting(true)
+        }
+        
+        private var statusIndicator: some View {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(requestStatus == "approved" ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: requestStatus == "approved" ? "checkmark" : "xmark")
+                        .foregroundColor(requestStatus == "approved" ? .green : .red)
+                        .font(.system(size: 16, weight: .bold))
+                }
+                
+                Text(requestStatus == "approved" ? "ACCEPTED" : "DECLINED")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(requestStatus == "approved" ? .green : .red)
+                    .tracking(0.3)
+                
+                Spacer()
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.black.opacity(0.3))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(
+                                requestStatus == "approved" ? Color.green.opacity(0.5) : Color.red.opacity(0.5),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 3)
+            )
+        }
+        
+        private var playButtonOverlay: some View {
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    Button(action: { showReelInvite = true }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black.opacity(0.7))
+                                .frame(width: 50, height: 50)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                            
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                                .offset(x: 2) // Slight offset to center the play icon visually
+                        }
+                        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+                        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                    }
+                    .padding(.top, 24)
+                    .padding(.trailing, 24)
+                }
+                
+                Spacer()
+            }
+        }
+        
+        // MARK: - Helper Methods
+        
+        private var shouldShowActionButtons: Bool {
+            let isPending = message.requestStatus == "pending" || requestStatus == "pending"
+            let isNotProcessed = requestStatus != "approved" && requestStatus != "rejected"
+            return isPending && isNotProcessed
+        }
+        
+        private func determineInviteType() -> String {
+            if !location.isEmpty {
+                // Try to determine activity type from location
+                let locationLower = location.lowercased()
+                if locationLower.contains("coffee") || locationLower.contains("café") {
+                    return "Coffee Chat"
+                } else if locationLower.contains("restaurant") || locationLower.contains("dinner") {
+                    return "Dinner"
+                } else if locationLower.contains("bar") || locationLower.contains("drinks") {
+                    return "Drinks"
+                } else if locationLower.contains("park") || locationLower.contains("walk") {
+                    return "Meetup"
+                } else {
+                    return "Hangout"
+                }
+            }
+            return "Invitation"
         }
         
         private func determineThumbnailURL(for message: Message) -> URL? {
-               // First, check if there's a video URL in the message attachments
-               if let firstAttachment = message.attachments.first {
-                   let videoURLString = firstAttachment.full.absoluteString
-                   
-                   // Check if it's a YouTube URL
-                   if YouTubeUtility.isYouTubeURL(videoURLString) {
-                       // Extract video ID and create YouTube thumbnail URL
-                       if let videoId = YouTubeUtility.extractVideoId(from: videoURLString) {
-                           return YouTubeUtility.getThumbnailURL(for: videoId)
-                       }
-                   } else {
-                       // For non-YouTube videos, use the original video URL as thumbnail
-                       // This might work for some video services that serve thumbnails directly
-                       return firstAttachment.full
-                   }
-               }
-               
-               // Fallback: use the thumbnail URL from attachments if available
-               return message.attachments.first?.thumbnail
-           }
-        
-        private func InviterInfoDisplay(DpRadius : CGFloat, message: Message, Description : String) -> some View {
-            Button {} label: {
-                UserAvatarView(avatarURL: message.user.avatarURL, name: message.user.name, size: 40)
-            
-            
-                VStack(alignment: .center, spacing: 2) {
-                    HStack {
-                        Text(message.user.name)
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        Text("•")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white)
-                            .padding(.leading, -5)
-                        
-                        Text("")
-                            .font(.system(size: 9))
-                            .foregroundColor(.white)
-                            .padding(.leading, -5)
-                    }
-                    .padding(.leading, -3)
-                    
-                    Text(Description)
-                        .font(.system(size: 8))
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding(.leading, 3)
-            }
-        }
-        
-        private func Location_Price_Time_Display_Sender(location: String, price: String, time: String) -> some View {
-            VStack(alignment: .center) {
-                Spacer()
-                HStack{
-                    Text(location)
-                        .foregroundColor(.white)
-                        .font(.system(size: 13, weight: .bold))
-
-                }
-                .padding(.bottom, 5)
-
-                // date-time
-                Text("\(time)")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white)
-                    .shadow(color: Color.black.opacity(0.5), radius: 20)
-            }
-            .padding(.bottom, 10)
-        }
-        
-        private func Location_Price_Time_Display_Receiver(location: String, price: String, time: String) -> some View {
-            HStack{
-                Text(location)
-                    .foregroundColor(.white)
-                    .font(.system(size: 10, weight: .semibold))
-                    .padding(.leading, 5)
-
-//                Text(price)
-//                    .foregroundColor(.white)
-//                    .font(.system(size: 10))
+            if let firstAttachment = message.attachments.first {
+                let videoURLString = firstAttachment.full.absoluteString
                 
-                Spacer()
-
-                // date-time
-                Text(time)
-                    .font(.system(size: 9))
-                    .padding(.trailing, 5)
-                    .foregroundColor(.white)
-                    .shadow(color: Color.black.opacity(0.5), radius: 20)
+                if YouTubeUtility.isYouTubeURL(videoURLString) {
+                    if let videoId = YouTubeUtility.extractVideoId(from: videoURLString) {
+                        return YouTubeUtility.getThumbnailURL(for: videoId)
+                    }
+                } else {
+                    return firstAttachment.full
+                }
             }
+            
+            return message.attachments.first?.thumbnail
         }
     }
+
     
     struct LoadingView: View {
         let width : CGFloat
@@ -3177,5 +3673,4 @@ private func hasYouTubeShortsURL(_ message: Message) -> Bool {
        return false
    }
    
-
 
