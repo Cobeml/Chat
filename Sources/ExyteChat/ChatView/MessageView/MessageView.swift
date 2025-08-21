@@ -2745,8 +2745,9 @@ struct YouTubeThumbnailView: View {
     private func thumbnailImageView(_ image: Image) -> some View {
         image
             .resizable()
-            .aspectRatio(contentMode: .fill)
+            .scaledToFill()
             .frame(width: cropWidth, height: cropHeight)
+            .scaleEffect(1.15)
             .clipped()
     }
     
@@ -3258,8 +3259,9 @@ extension MessageView {
                         case .success(let image):
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: cardWidth, height: cardHeight)
+                                .scaleEffect(1.15)
                                 .clipped()
                         case .failure(_), .empty:
                             placeholderView
