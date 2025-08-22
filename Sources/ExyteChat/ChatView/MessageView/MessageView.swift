@@ -873,21 +873,21 @@ struct MessageView: View {
                                     requestStatus = "rejected"
                                     dismiss()
                                 }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 14, weight: .medium))
-                                        Text("Decline")
-                                            .font(.system(size: 15, weight: .medium))
-                                    }
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(Color.white)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 22)
-                                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                                    Text("DECLINE")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .tracking(0.2)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 36)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 18)
+                                                .fill(Color.black.opacity(0.4))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                                )
+                                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                                        )
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 
@@ -898,21 +898,17 @@ struct MessageView: View {
                                     requestStatus = "approved"
                                     dismiss()
                                 }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .medium))
-                                        Text("Accept")
-                                            .font(.system(size: 15, weight: .medium))
-                                    }
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(Color.white)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 22)
-                                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                                    Text("ACCEPT")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundColor(.black)
+                                        .tracking(0.2)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 36)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 18)
+                                                .fill(Color.white)
+                                                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                                        )
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -1552,19 +1548,21 @@ struct MessageView: View {
                     self.tapActionClosure?(message, "rejected")
                     requestStatus = "rejected"
                 }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    Text("DECLINE")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .tracking(0.2)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.black.opacity(0.4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        )
                 }
                 .buttonStyle(PlainButtonStyle())
                 .allowsHitTesting(true)
@@ -1575,19 +1573,17 @@ struct MessageView: View {
                     self.tapActionClosure?(message, "approved")
                     requestStatus = "approved"
                 }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    Text("ACCEPT")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .tracking(0.2)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                        )
                 }
                 .buttonStyle(PlainButtonStyle())
                 .allowsHitTesting(true)
@@ -1925,22 +1921,18 @@ struct MessageView: View {
                         tapActionClosure?(message, "approved")
                         requestStatus = "approved" // Update status to hide buttons
                     }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .medium))
-                            Text("Accept")
-                                .font(.system(size: 15, weight: .medium))
-                        }
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22)
-                                .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 22))
-                        .padding(.trailing, 5)
+                        Text("ACCEPT")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(.black)
+                            .tracking(0.2)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(Color.white)
+                                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                            )
+                            .padding(.trailing, 5)
                     }
                     
                     Button(action: {
@@ -1948,22 +1940,22 @@ struct MessageView: View {
                         tapActionClosure?(message, "rejected")
                         requestStatus = "rejected" // Update status to hide buttons
                     }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .medium))
-                            Text("Reject")
-                                .font(.system(size: 15, weight: .medium))
-                        }
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22)
-                                .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 22))
-                        .padding(.leading, 5)
+                        Text("DECLINE")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .tracking(0.2)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(Color.black.opacity(0.4))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            )
+                            .padding(.leading, 5)
                     }
                 }
                 .padding(.horizontal, MessageView.horizontalTextPadding)
@@ -2894,16 +2886,21 @@ struct AcceptRejectButtonsView: View {
     
     private var rejectButton: some View {
         Button(action: onReject) {
-            HStack(spacing: 8) {
-                Image(systemName: "xmark.circle")
-                    .font(.system(size: 16, weight: .medium))
-                Text("Decline")
-                    .font(.system(size: 16, weight: .medium))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(rejectButtonBackground)
+            Text("DECLINE")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .tracking(0.2)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.black.opacity(0.4))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -2919,16 +2916,17 @@ struct AcceptRejectButtonsView: View {
     
     private var acceptButton: some View {
         Button(action: onAccept) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 16, weight: .medium))
-                Text("Accept")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(.black)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(acceptButtonBackground)
+            Text("ACCEPT")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.black)
+                .tracking(0.2)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                )
         }
         .buttonStyle(PlainButtonStyle())
     }
