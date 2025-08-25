@@ -696,6 +696,11 @@ struct MessageView: View {
             youtubeVideoID != nil
         }
 
+        // Use same relative formatting behavior as compact card
+        private var formattedExpandedTime: String {
+            formatPlanInviteTime(time)
+        }
+
         var body: some View {
             GeometryReader { geo in
                 ZStack {
@@ -846,7 +851,7 @@ struct MessageView: View {
                                                         .font(.system(size: 14))
                                                         .padding(.top, 2)
                                                     
-                                                    Text(time)
+                                                    Text(formattedExpandedTime)
                                                         .font(.subheadline)
                                                         .foregroundColor(.white.opacity(0.9))
                                                         .fixedSize(horizontal: false, vertical: true)
@@ -1124,19 +1129,6 @@ struct MessageView: View {
                 modernInviteCard
                     .frame(width: cardWidth, height: cardHeight)
                     .background(Color.clear)
-                    .fullScreenCover(isPresented: $showReelInvite) {
-                        ReelInvite(
-                            player: $player,
-                            venue: location,
-                            time: time,
-                            price: price,
-                            description: description,
-                            message: message,
-                            tapActionClosure: tapActionClosure,
-                            receiverName: receiverName,
-                            receiverAge: receiverAge
-                        )
-                    }
                 
                 // Message text after the entire card - styled like a regular message bubble
                 // REMOVED: Custom message is now sent as a separate regular message
@@ -1175,8 +1167,12 @@ struct MessageView: View {
         
         private var modernInviteCard: some View {
             Button(action: {
-                print("🎯 PlanInviteView card tapped - opening full screen!")
-                showReelInvite = true
+                print("🎯 PlanInviteView card tapped - routing to host expanded view")
+                if let tap = tapActionClosure {
+                    tap(message, "openExpandedPlanInvite")
+                } else {
+                    showReelInvite = true
+                }
             }) {
                 ZStack {
                     // Background Video/Image with enhanced styling
@@ -1185,6 +1181,7 @@ struct MessageView: View {
                     
                     // Professional gradient overlay
                     modernGradientOverlay
+                        .allowsHitTesting(false)
                         .clipShape(RoundedRectangle(cornerRadius: 20))
                     
                     // Content overlay with better organization
@@ -1210,10 +1207,7 @@ struct MessageView: View {
                         .padding(.bottom, 20)
                     }
                     
-                    // Play button overlay (only show if no action buttons)
-                    if isThumbnailLoaded && !shouldShowActionButtons {
-                        playButtonOverlay
-                    }
+                    // Removed play button overlay per design change
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
@@ -1243,7 +1237,7 @@ struct MessageView: View {
                     y: 2
                 )
             }
-            .buttonStyle(PlainButtonStyle())
+            .contentShape(RoundedRectangle(cornerRadius: 20))
         }
         
         private var videoBackgroundView: some View {
@@ -1259,6 +1253,7 @@ struct MessageView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: cardWidth, height: cardHeight)
+                                .scaleEffect(1.15)
                                 .onAppear {
                                     print("✅ Image loaded successfully for URL: \(validURL.absoluteString)")
                                     isThumbnailLoaded = true
@@ -1304,6 +1299,7 @@ struct MessageView: View {
                 endPoint: .bottomTrailing
             )
             .frame(width: cardWidth, height: cardHeight)
+            .scaleEffect(1.15)
             .overlay(
                 VStack(spacing: 12) {
                     // Enhanced default icon - more appealing
@@ -1340,28 +1336,7 @@ struct MessageView: View {
         }
         
         private var inviteHeaderSection: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                // Compact plan invite tag
-                HStack {
-                    Text("PLAN INVITE")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .tracking(0.8)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule()
-                                .fill(Color.black.opacity(0.7))
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                                )
-                                .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
-                        )
-                    
-                    Spacer()
-                }
-            }
+            EmptyView()
         }
         
         private var userInfoSection: some View {
@@ -1460,7 +1435,7 @@ struct MessageView: View {
                             .font(.system(size: 11, weight: .semibold))
                             .frame(width: 12)
                         
-                        Text(time)
+                        Text(formattedTime)
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
@@ -1472,16 +1447,19 @@ struct MessageView: View {
                 }
             }
         }
+
+        // MARK: - Time Formatting Helpers (Today/Tomorrow/Weekday when possible)
+        private var formattedTime: String {
+            formatPlanInviteTime(time)
+        }
         
         private var actionSection: some View {
             Group {
-                if shouldShowActionButtons {
-                    // Show accept/decline buttons for recipient, view details for sender
-                    if !message.user.isCurrentUser {
-                        modernAcceptDeclineButtons
-                    } else {
-                        modernActionButtons
-                    }
+                // Always show View Details for sender
+                if message.user.isCurrentUser {
+                    modernActionButtons
+                } else if shouldShowActionButtons {
+                    modernAcceptDeclineButtons
                 } else if requestStatus == "approved" || requestStatus == "rejected" {
                     statusIndicator
                 }
@@ -1493,7 +1471,11 @@ struct MessageView: View {
         private var modernActionButtons: some View {
             Button(action: {
                 print("🎯 View button tapped successfully!")
-                showReelInvite = true
+                if let tap = tapActionClosure {
+                    tap(message, "openExpandedPlanInvite")
+                } else {
+                    showReelInvite = true
+                }
             }) {
                 HStack(spacing: 6) {
                     Text("VIEW DETAILS")
@@ -1529,13 +1511,6 @@ struct MessageView: View {
                 )
             }
             .buttonStyle(.plain)
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded { _ in
-                        print("🎯 Simultaneous gesture - ensuring button tap!")
-                        showReelInvite = true
-                    }
-            )
             .contentShape(Rectangle())
             .allowsHitTesting(true)
         }
@@ -1625,43 +1600,21 @@ struct MessageView: View {
             )
         }
         
-        private var playButtonOverlay: some View {
-            VStack {
-                HStack {
-                    Spacer()
-                    
-                    Button(action: { showReelInvite = true }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.black.opacity(0.7))
-                                .frame(width: 50, height: 50)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                            
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.white)
-                                .offset(x: 2) // Slight offset to center the play icon visually
-                        }
-                        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
-                        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                    }
-                    .padding(.top, 24)
-                    .padding(.trailing, 24)
-                }
-                
-                Spacer()
-            }
-        }
+        // Removed playButtonOverlay per design change
         
         // MARK: - Helper Methods
         
         private var shouldShowActionButtons: Bool {
-            let isPending = message.requestStatus == "pending" || requestStatus == "pending"
-            let isNotProcessed = requestStatus != "approved" && requestStatus != "rejected"
-            return isPending && isNotProcessed
+            // Determine the effective status with sensible defaults
+            let effectiveStatus: String = {
+                if !requestStatus.isEmpty { return requestStatus }
+                if let status = message.requestStatus, !status.isEmpty { return status }
+                return "pending"
+            }()
+            let isPending = effectiveStatus == "pending"
+            let isNotProcessed = effectiveStatus != "approved" && effectiveStatus != "rejected"
+            let isRecipient = !message.user.isCurrentUser
+            return isRecipient && isPending && isNotProcessed
         }
         
         private func determineInviteType() -> String {
@@ -2122,6 +2075,111 @@ extension Notification.Name {
 }
 
 
+
+// MARK: - Shared Time Formatting Helpers
+fileprivate func formatPlanInviteTime(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty { return raw }
+    let lower = trimmed.lowercased()
+    if lower.contains("today") || lower.contains("tomorrow") || lower.contains("tonight") {
+        return trimmed
+    }
+    guard let date = parsePlanInviteDate(from: trimmed) else {
+        return trimmed
+    }
+    let calendar = Calendar.current
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.amSymbol = "AM"
+    formatter.pmSymbol = "PM"
+
+    if calendar.isDateInToday(date) {
+        formatter.dateFormat = "'Today' h:mm a"
+    } else if calendar.isDateInTomorrow(date) {
+        formatter.dateFormat = "'Tomorrow' h:mm a"
+    } else {
+        let nowStart = calendar.startOfDay(for: Date())
+        let dateStart = calendar.startOfDay(for: date)
+        if let days = calendar.dateComponents([.day], from: nowStart, to: dateStart).day, days > 0, days <= 7 {
+            formatter.dateFormat = "EEEE h:mm a"
+        } else {
+            formatter.dateFormat = "MMM d, h:mm a"
+        }
+    }
+    return formatter.string(from: date)
+}
+
+fileprivate func parsePlanInviteDate(from string: String) -> Date? {
+    var trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Normalize known separators/phrases like " at " and trailing timezone abbreviations
+    trimmed = trimmed
+        .replacingOccurrences(of: " at ", with: " ", options: [.caseInsensitive])
+        .replacingOccurrences(of: ",", with: ",")
+
+    // Remove trailing 2-4 letter TZ tokens (e.g., PDT)
+    if let tzRange = trimmed.range(of: #"\s+[A-Z]{2,4}$"#, options: .regularExpression) {
+        trimmed.removeSubrange(tzRange)
+        trimmed = trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // Unix timestamp (seconds or milliseconds)
+    if let ts = Double(trimmed) {
+        if trimmed.count >= 13 { // milliseconds
+            return Date(timeIntervalSince1970: ts / 1000.0)
+        } else if trimmed.count >= 10 { // seconds
+            return Date(timeIntervalSince1970: ts)
+        }
+    }
+
+    // Try ISO8601 first (handles many variants, including fractional seconds)
+    let iso = ISO8601DateFormatter()
+    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = iso.date(from: trimmed) { return d }
+    iso.formatOptions = [.withInternetDateTime]
+    if let d = iso.date(from: trimmed) { return d }
+
+    // Common explicit formats
+    let formats = [
+        // ISO-like
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+        "yyyy-MM-dd'T'HH:mm:ssZ",
+        "yyyy-MM-dd'T'HH:mmXXXXX",
+        "yyyy-MM-dd'T'HH:mmZ",
+        // Dashes and spaces
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd HH:mm",
+        // Month day
+        "MMM d, yyyy h:mm a",
+        "MMM d yyyy h:mm a",
+        "MMM d h:mm a",
+        "MMMM d, yyyy h:mm a",
+        // Slashes
+        "MM/dd/yyyy h:mm a",
+        "M/d/yyyy h:mm a",
+        "MM/dd/yy h:mm a",
+        "M/d/yy h:mm a"
+    ]
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    for format in formats {
+        formatter.dateFormat = format
+        if let date = formatter.date(from: trimmed) { return date }
+    }
+
+    // Fallback: detect date using NSDataDetector
+    if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) {
+        let ns = trimmed as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        if let match = detector.firstMatch(in: trimmed, options: [], range: range), let date = match.date {
+            return date
+        }
+    }
+
+    return nil
+}
 
 import SwiftUI
 
@@ -2990,7 +3048,7 @@ struct VenueDetailsView: View {
             Image(systemName: "clock")
                 .foregroundColor(.gray)
                 .font(.caption)
-            Text(time)
+            Text(formatPlanInviteTime(time))
                 .font(.system(size: 12))
                 .foregroundColor(.gray)
         }
